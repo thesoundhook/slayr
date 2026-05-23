@@ -167,26 +167,26 @@ export default function ScanPage() {
 
         {/* Camera */}
         {cameraSupported && (
-          !cameraActive ? (
-            <Button variant="outline" className="w-full" onClick={startCamera} disabled={loading}>
-              <Camera className="h-4 w-4" />
-              Use Camera
-            </Button>
-          ) : (
-            <div className="space-y-2">
-              <div className="relative rounded-lg overflow-hidden bg-black aspect-video">
-                <video ref={videoRef} className="w-full h-full object-cover" muted playsInline />
-                <canvas ref={canvasRef} className="hidden" />
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <ScanLine className="h-16 w-16 text-white/60 animate-pulse" />
-                </div>
+          <div className="space-y-2">
+            <div className={`relative rounded-lg overflow-hidden bg-black aspect-video ${!cameraActive ? 'hidden' : ''}`}>
+              <video ref={videoRef} className="w-full h-full object-cover" muted playsInline />
+              <canvas ref={canvasRef} className="hidden" />
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <ScanLine className="h-16 w-16 text-white/60 animate-pulse" />
               </div>
+            </div>
+            {!cameraActive ? (
+              <Button variant="outline" className="w-full" onClick={startCamera} disabled={loading}>
+                <Camera className="h-4 w-4" />
+                Use Camera
+              </Button>
+            ) : (
               <Button variant="outline" className="w-full" onClick={stopCamera}>
                 <CameraOff className="h-4 w-4" />
                 Stop Camera
               </Button>
-            </div>
-          )
+            )}
+          </div>
         )}
 
         {/* Loading */}

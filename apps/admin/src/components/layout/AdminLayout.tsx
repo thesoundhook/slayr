@@ -7,6 +7,8 @@ const pageTitles: Record<string, string> = {
   '/events': 'Events',
   '/events/new': 'Create Event',
   '/orders': 'Orders',
+  '/briefs': 'Briefs',
+  '/briefs/new': 'New Brief',
 }
 
 function getTitle(pathname: string) {
@@ -25,7 +27,7 @@ export default function AdminLayout() {
       <Sidebar />
       <div className="pl-64">
         <TopBar title={getTitle(pathname)} />
-        <main className="p-6">
+        <main>
           <Outlet />
         </main>
       </div>

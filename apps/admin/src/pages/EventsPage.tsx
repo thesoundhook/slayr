@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import PageHero from '@/components/ui/PageHero'
 import { getEvents, deleteEvent } from '@/services/eventService'
 import { supabase } from '@/lib/supabase'
 import type { DbEvent } from '@/types/database'
@@ -61,40 +62,47 @@ export default function EventsPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <>
+      <PageHero
+        badge="Catalogue"
+        title="Events"
+        subtitle="Create, manage, and monitor all events on the platform."
+        ghost="01"
+        actions={
+          <Button onClick={() => navigate('/events/new')}>
+            <Plus className="h-4 w-4" />
+            Create Event
+          </Button>
+        }
+      />
+      <div className="p-6 space-y-4">
       {error && (
         <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error}
         </div>
       )}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 flex-1">
-          <div className="relative max-w-64 flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search events…"
-              className="flex h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
-          <select
-            value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="">All statuses</option>
-            <option value="upcoming">Upcoming</option>
-            <option value="ongoing">Ongoing</option>
-            <option value="past">Past</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-          <p className="text-muted-foreground text-sm whitespace-nowrap">{filtered.length} of {events.length}</p>
+      <div className="flex items-center gap-3">
+        <div className="relative max-w-64 flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search events…"
+            className="flex h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
         </div>
-        <Button onClick={() => navigate('/events/new')}>
-          <Plus className="h-4 w-4" />
-          Create Event
-        </Button>
+        <select
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value)}
+          className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="">All statuses</option>
+          <option value="upcoming">Upcoming</option>
+          <option value="ongoing">Ongoing</option>
+          <option value="past">Past</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+        <p className="text-muted-foreground text-sm whitespace-nowrap">{filtered.length} of {events.length}</p>
       </div>
 
       <div className="rounded-lg border bg-card">
@@ -160,6 +168,7 @@ export default function EventsPage() {
           </TableBody>
         </Table>
       </div>
-    </div>
+      </div>
+    </>
   )
 }

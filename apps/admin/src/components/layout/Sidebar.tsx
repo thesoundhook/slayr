@@ -1,44 +1,66 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Calendar, ShoppingBag, Zap } from 'lucide-react'
+import { LayoutDashboard, Calendar, ShoppingBag, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const navItems = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/events', label: 'Events', icon: Calendar, end: false },
-  { to: '/orders', label: 'Orders', icon: ShoppingBag, end: false },
+const navGroups = [
+  {
+    label: 'Analytics',
+    items: [
+      { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
+    ],
+  },
+  {
+    label: 'Catalogue',
+    items: [
+      { to: '/events', label: 'Events', icon: Calendar, end: false },
+      { to: '/orders', label: 'Orders', icon: ShoppingBag, end: false },
+    ],
+  },
+  {
+    label: 'Client Work',
+    items: [
+      { to: '/briefs', label: 'Briefs', icon: FileText, end: false },
+    ],
+  },
 ]
 
 export default function Sidebar() {
   return (
-    <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-sidebar text-white flex flex-col">
-      <div className="flex items-center gap-2 px-6 py-5 border-b border-white/10">
-        <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-          <Zap className="h-4 w-4 text-white" />
+    <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-sidebar-border">
+        <img src="/slayr logo.png" alt="Slayr" className="h-7 w-auto" />
+        <div>
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest leading-none mt-0.5">Admin Panel</p>
         </div>
-        <span className="font-display font-semibold text-lg">Slayr Admin</span>
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        {navItems.map(({ to, label, icon: Icon, end }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-white/15 text-white'
-                  : 'text-white/60 hover:bg-white/10 hover:text-white'
-              )
-            }
-          >
-            <Icon className="h-4 w-4 shrink-0" />
-            {label}
-          </NavLink>
+      <nav className="flex-1 py-4 overflow-y-auto">
+        {navGroups.map(({ label, items }) => (
+          <div key={label} className="mb-4">
+            <p className="px-5 mb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              {label}
+            </p>
+            {items.map(({ to, label: itemLabel, icon: Icon, end }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 px-5 py-2.5 text-sm border-l-2 transition-colors',
+                    isActive
+                      ? 'border-primary bg-accent text-primary font-medium'
+                      : 'border-transparent text-muted-foreground hover:bg-secondary hover:text-foreground'
+                  )
+                }
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                {itemLabel}
+              </NavLink>
+            ))}
+          </div>
         ))}
       </nav>
-
     </aside>
   )
 }

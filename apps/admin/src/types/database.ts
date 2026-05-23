@@ -94,3 +94,14 @@ export interface DbTicket {
   used_at: string | null
   created_at: string
 }
+
+
+export interface DbBrief {
+  id: string
+  created_at: string
+  updated_at: string
+  title: string
+  status: 'draft' | 'complete'
+  current_gate: number
+  data: Record<string, unknown>
+}

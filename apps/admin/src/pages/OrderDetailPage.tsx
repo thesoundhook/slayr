@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/Table'
 import { formatPrice, formatDateTime } from '@/lib/utils'
 import { ArrowLeft } from 'lucide-react'
+import PageHero from '@/components/ui/PageHero'
 
 const statusVariant: Record<string, 'default' | 'success' | 'warning' | 'destructive'> = {
   confirmed: 'success',
@@ -35,11 +36,19 @@ export default function OrderDetailPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-3xl">
-      <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="-ml-2">
-        <ArrowLeft className="h-4 w-4" />
-        Back to Orders
-      </Button>
+    <>
+      <PageHero
+        badge="Commerce"
+        title="Order Detail"
+        subtitle="Full breakdown of a single ticket purchase."
+        actions={
+          <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
+        }
+      />
+      <div className="p-6 space-y-6 max-w-3xl">
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Card>
@@ -117,6 +126,7 @@ export default function OrderDetailPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </>
   )
 }

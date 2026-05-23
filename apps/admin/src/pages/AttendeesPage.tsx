@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/Table'
 import { formatDateTime } from '@/lib/utils'
 import { ArrowLeft, Download } from 'lucide-react'
+import PageHero from '@/components/ui/PageHero'
 
 type Attendee = DbTicket & {
   orders: { customer_first_name: string; customer_last_name: string; customer_email: string; customer_phone: string | null } | null
@@ -54,18 +55,26 @@ export default function AttendeesPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/events')} className="-ml-2">
-          <ArrowLeft className="h-4 w-4" />
-          Back to Events
-        </Button>
-        <Button variant="outline" onClick={exportCsv} disabled={attendees.length === 0}>
-          <Download className="h-4 w-4" />
-          Export CSV
-        </Button>
-      </div>
-
+    <>
+      <PageHero
+        badge="Access"
+        title="Attendees"
+        subtitle={event ? `All registered attendees for ${event.title}.` : 'All registered attendees for this event.'}
+        ghost="04"
+        actions={
+          <>
+            <Button variant="outline" size="sm" onClick={() => navigate('/events')}>
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportCsv} disabled={attendees.length === 0}>
+              <Download className="h-4 w-4" />
+              Export CSV
+            </Button>
+          </>
+        }
+      />
+      <div className="p-6 space-y-4">
       {event && (
         <div>
           <h2 className="text-lg font-semibold">{event.title}</h2>
@@ -111,6 +120,7 @@ export default function AttendeesPage() {
           </TableBody>
         </Table>
       </div>
-    </div>
+      </div>
+    </>
   )
 }

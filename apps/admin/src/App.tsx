@@ -10,6 +10,8 @@ import OrdersPage from '@/pages/OrdersPage'
 import OrderDetailPage from '@/pages/OrderDetailPage'
 import AttendeesPage from '@/pages/AttendeesPage'
 import AdminLayout from '@/components/layout/AdminLayout'
+import BriefsPage from '@/pages/BriefsPage'
+import BriefFormPage from '@/pages/BriefFormPage'
 
 function ProtectedRoute({ session, children }: { session: Session | null; children: React.ReactNode }) {
   if (!session) return <Navigate to="/login" replace />
@@ -55,7 +57,14 @@ export default function App() {
           <Route path="events/:id/attendees" element={<AttendeesPage />} />
           <Route path="orders" element={<OrdersPage />} />
           <Route path="orders/:id" element={<OrderDetailPage />} />
+          <Route path="briefs" element={<BriefsPage />} />
         </Route>
+        <Route path="/briefs/new" element={
+          <ProtectedRoute session={session}><BriefFormPage /></ProtectedRoute>
+        } />
+        <Route path="/briefs/:id" element={
+          <ProtectedRoute session={session}><BriefFormPage /></ProtectedRoute>
+        } />
       </Routes>
     </BrowserRouter>
   )

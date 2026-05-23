@@ -3,7 +3,6 @@ import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Zap } from 'lucide-react'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -26,12 +25,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="flex justify-center mb-8">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center">
-              <Zap className="h-5 w-5 text-white" />
-            </div>
-            <span className="font-display font-bold text-2xl">Slayr Admin</span>
-          </div>
+          <img src="/slayr logo.png" alt="Slayr" className="h-10 w-auto" />
         </div>
 
         <Card>

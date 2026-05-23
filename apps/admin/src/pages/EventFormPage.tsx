@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import ImageUpload from '@/components/ui/ImageUpload'
 import { ArrowLeft, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import PageHero from '@/components/ui/PageHero'
 
 const CATEGORIES = ['music', 'art', 'food', 'sports', 'tech', 'comedy', 'fashion', 'film', 'business', 'other']
 const TICKET_TYPES = ['general', 'vip', 'early-bird', 'group'] as const
@@ -186,11 +187,20 @@ export default function EventFormPage() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
-      <Button type="button" variant="ghost" size="sm" onClick={() => navigate('/events')} className="-ml-2">
-        <ArrowLeft className="h-4 w-4" />
-        Back to Events
-      </Button>
+    <>
+      <PageHero
+        badge="Create / Edit"
+        title={isEdit ? 'Edit Event' : 'New Event'}
+        subtitle={isEdit ? 'Update the details for this event.' : 'Fill in the details to publish a new event on the platform.'}
+        ghost={isEdit ? '02' : '02'}
+        actions={
+          <Button type="button" variant="outline" size="sm" onClick={() => navigate('/events')}>
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
+        }
+      />
+      <form onSubmit={handleSubmit} className="p-6 space-y-6 max-w-3xl">
 
       {/* Basic info */}
       <Card>
@@ -472,6 +482,7 @@ export default function EventFormPage() {
         </Button>
       </div>
     </form>
+    </>
   )
 }
 

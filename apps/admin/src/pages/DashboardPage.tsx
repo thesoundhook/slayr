@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import PageHero from '@/components/ui/PageHero'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { formatPrice } from '@/lib/utils'
 import {
@@ -69,7 +70,14 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      <PageHero
+        badge="Overview"
+        title="Dashboard"
+        subtitle="Track revenue, ticket sales, and events at a glance."
+        ghost="00"
+      />
+      <div className="p-6 space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map(({ label, value, icon: Icon, color }) => (
           <Card key={label}>
@@ -128,6 +136,7 @@ export default function DashboardPage() {
           </ResponsiveContainer>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </>
   )
 }

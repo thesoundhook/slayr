@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import PageHero from '@/components/ui/PageHero'
 import { getOrders } from '@/services/orderService'
 import type { OrderWithDetails } from '@/services/orderService'
 import { Badge } from '@/components/ui/Badge'
@@ -32,7 +33,14 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <>
+      <PageHero
+        badge="Commerce"
+        title="Orders"
+        subtitle="Review all ticket purchases and transaction statuses."
+        ghost="03"
+      />
+      <div className="p-6 space-y-4">
       <div className="flex items-center gap-3">
         <select
           value={statusFilter}
@@ -91,6 +99,7 @@ export default function OrdersPage() {
           </TableBody>
         </Table>
       </div>
-    </div>
+      </div>
+    </>
   )
 }

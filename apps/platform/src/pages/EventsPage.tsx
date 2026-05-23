@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Search, Filter, Calendar, MapPin, Users, ChevronDown } from 'lucide-react'
+import { Search, Calendar, MapPin, Users } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Card, CardHeader } from '../components/ui/Card'
@@ -106,11 +106,6 @@ export function EventsPage() {
             <p className="text-muted-foreground">
               {loading ? 'Loading...' : `${events.length} event${events.length !== 1 ? 's' : ''} found`}
             </p>
-            <Button variant="outline" size="sm">
-              <Filter className="w-4 h-4 mr-2" />
-              More Filters
-              <ChevronDown className="w-4 h-4 ml-2" />
-            </Button>
           </div>
 
           {/* Event Grid */}

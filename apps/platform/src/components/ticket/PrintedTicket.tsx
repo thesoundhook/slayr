@@ -92,9 +92,9 @@ export function PrintedTicket({
           <div className="flex-1 p-5 pl-8">
 
             {/* Header */}
-            <div className="flex justify-between items-start mb-4">
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2">
+            <div className="flex justify-between items-start mb-4 gap-2">
+              <div className="space-y-1.5 min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Badge
                     variant={isVip ? 'default' : 'secondary'}
                     className={isVip
@@ -104,19 +104,19 @@ export function PrintedTicket({
                   >
                     {isVip ? '✦ ' : ''}{ticketType.name}
                   </Badge>
-                  <span className="text-xs font-mono text-slate-400">
+                  <span className="text-xs font-mono text-slate-400 truncate max-w-[80px]">
                     #{ticketNumber}
                   </span>
                 </div>
-                <h3 className={`font-display font-bold text-base leading-tight ${
+                <h3 className={`font-display font-bold text-sm sm:text-base leading-tight line-clamp-2 ${
                   isVip ? 'text-purple-900' : 'text-slate-900 dark:text-slate-100'
                 }`}>
                   {event.title}
                 </h3>
               </div>
 
-              <div className="text-right ml-2">
-                <div className={`font-bold text-xl leading-none ${
+              <div className="text-right flex-shrink-0">
+                <div className={`font-bold text-base sm:text-xl leading-none ${
                   isVip ? 'text-purple-800' : 'text-slate-900 dark:text-slate-100'
                 }`}>
                   {formatPrice(ticketType.price)}
@@ -139,7 +139,7 @@ export function PrintedTicket({
                 <Clock className="w-3 h-3 flex-shrink-0 ml-1" />
                 <span>{formatTime(event.time)}</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0">
                 <MapPin className="w-3 h-3 flex-shrink-0" />
                 <span className="truncate">{event.venue.name}, {event.venue.city}</span>
               </div>

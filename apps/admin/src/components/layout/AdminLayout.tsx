@@ -10,6 +10,7 @@ const pageTitles: Record<string, string> = {
   '/briefs': 'Briefs',
   '/briefs/new': 'New Brief',
   '/team': 'Team',
+  '/scan': 'Scan Tickets',
 }
 
 function getTitle(pathname: string) {

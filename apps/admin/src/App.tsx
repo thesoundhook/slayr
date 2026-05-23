@@ -14,6 +14,7 @@ import AdminLayout from '@/components/layout/AdminLayout'
 import BriefsPage from '@/pages/BriefsPage'
 import BriefFormPage from '@/pages/BriefFormPage'
 import TeamPage from '@/pages/TeamPage'
+import ScanPage from '@/pages/ScanPage'
 import VenuesPage from '@/pages/VenuesPage'
 import VenueFormPage from '@/pages/VenueFormPage'
 import OrganizersPage from '@/pages/OrganizersPage'
@@ -46,6 +47,7 @@ function AppRoutes({ session }: { session: Session | null }) {
         <Route path="events/new" element={<EventFormPage />} />
         <Route path="events/:id/edit" element={<EventFormPage />} />
         <Route path="events/:id/attendees" element={<AttendeesPage />} />
+        <Route path="scan" element={<ScanPage />} />
         <Route path="orders" element={<SuperAdminRoute><OrdersPage /></SuperAdminRoute>} />
         <Route path="orders/:id" element={<SuperAdminRoute><OrderDetailPage /></SuperAdminRoute>} />
         <Route path="briefs" element={<SuperAdminRoute><BriefsPage /></SuperAdminRoute>} />

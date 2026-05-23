@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Search, ShoppingCart, User, Moon, Sun } from 'lucide-react'
+import { ShoppingCart, Moon, Sun } from 'lucide-react'
 import { useCartStore } from '../../stores/cartStore'
 import { useState, useEffect } from 'react'
 
@@ -39,7 +39,7 @@ export function Navbar() {
   ]
 
   return (
-    <nav className="sticky top-0 z-50 backdrop-blur-md bg-background/80 border-b border-border/50">
+    <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-sm bg-transparent border-b border-white/10">
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo - Simplified */}
@@ -75,16 +75,6 @@ export function Navbar() {
 
           {/* Right side actions - Minimal */}
           <div className="flex items-center space-x-2">
-            {/* Search */}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="p-2 rounded-lg hover:bg-muted/50 transition-colors"
-              aria-label="Search"
-            >
-              <Search className="w-4 h-4 text-muted-foreground" />
-            </motion.button>
-
             {/* Theme Toggle */}
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -120,15 +110,6 @@ export function Navbar() {
               </motion.div>
             </Link>
 
-            {/* User Menu */}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="p-2 rounded-lg hover:bg-muted/50 transition-colors"
-              aria-label="User menu"
-            >
-              <User className="w-4 h-4 text-muted-foreground" />
-            </motion.button>
           </div>
         </div>
       </div>

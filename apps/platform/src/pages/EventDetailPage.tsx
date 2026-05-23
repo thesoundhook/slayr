@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Calendar, MapPin, Clock, Users, Share2, Heart, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Calendar, MapPin, Clock, Users, CheckCircle, ShoppingCart } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { Card, CardContent } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
@@ -13,10 +13,10 @@ import { Event } from '../types/event'
 
 export function EventDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const { addItem } = useCartStore()
+  const navigate = useNavigate()
+  const { items, addItem, removeItem, updateQuantity: updateCartQuantity } = useCartStore()
   const [event, setEvent] = useState<Event | null>(null)
   const [loading, setLoading] = useState(true)
-  const [ticketQuantities, setTicketQuantities] = useState<Record<string, number>>({})
   const [selectedImage, setSelectedImage] = useState(0)
 
   useEffect(() => {
@@ -54,40 +54,34 @@ export function EventDetailPage() {
     )
   }
 
+  const getTicketQuantity = (ticketTypeId: string) => {
+    const cartItem = items.find(i => i.eventId === event.id && i.ticketTypeId === ticketTypeId)
+    return cartItem?.quantity ?? 0
+  }
+
   const updateQuantity = (ticketTypeId: string, change: number) => {
-    setTicketQuantities(prev => {
-      const current = prev[ticketTypeId] || 0
-      const newQuantity = Math.max(0, current + change)
-      const ticketType = event.ticketTypes.find(t => t.id === ticketTypeId)
-      if (ticketType && newQuantity <= ticketType.maxPerOrder && newQuantity <= (ticketType.quantity - ticketType.sold)) {
-        return { ...prev, [ticketTypeId]: newQuantity }
-      }
-      return prev
-    })
+    const ticketType = event.ticketTypes.find(t => t.id === ticketTypeId)
+    if (!ticketType) return
+
+    const current = getTicketQuantity(ticketTypeId)
+    const newQuantity = current + change
+
+    if (newQuantity < 0) return
+    if (newQuantity > ticketType.maxPerOrder) return
+    if (newQuantity > ticketType.quantity - ticketType.sold) return
+
+    if (newQuantity === 0) {
+      removeItem(event.id, ticketTypeId)
+    } else if (current === 0) {
+      addItem(event, ticketType, 1)
+    } else {
+      updateCartQuantity(event.id, ticketTypeId, newQuantity)
+    }
   }
 
-  const getTotalTickets = () => {
-    return Object.values(ticketQuantities).reduce((sum, qty) => sum + qty, 0)
-  }
-
-  const getTotalPrice = () => {
-    return Object.entries(ticketQuantities).reduce((total, [typeId, qty]) => {
-      const ticketType = event.ticketTypes.find(t => t.id === typeId)
-      return total + (ticketType ? ticketType.price * qty : 0)
-    }, 0)
-  }
-
-  const handleAddToCart = () => {
-    Object.entries(ticketQuantities).forEach(([typeId, quantity]) => {
-      if (quantity > 0) {
-        const ticketType = event.ticketTypes.find(t => t.id === typeId)
-        if (ticketType) {
-          addItem(event, ticketType, quantity)
-        }
-      }
-    })
-    setTicketQuantities({})
-  }
+  const eventCartItems = items.filter(i => i.eventId === event.id)
+  const totalTickets = eventCartItems.reduce((sum, i) => sum + i.quantity, 0)
+  const totalPrice = eventCartItems.reduce((sum, i) => sum + i.price * i.quantity, 0)
 
   return (
     <div className="min-h-screen pt-8">
@@ -182,14 +176,6 @@ export function EventDetailPage() {
                   </div>
                 </div>
 
-                <div className="flex gap-2">
-                  <Button variant="outline" size="icon">
-                    <Heart className="w-4 h-4" />
-                  </Button>
-                  <Button variant="outline" size="icon">
-                    <Share2 className="w-4 h-4" />
-                  </Button>
-                </div>
               </div>
 
               {/* Venue Info */}
@@ -202,11 +188,6 @@ export function EventDetailPage() {
                       <p className="text-muted-foreground">
                         {event.venue.address}, {event.venue.city}, {event.venue.state}
                       </p>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span>Capacity: {event.venue.capacity.toLocaleString()}</span>
-                        <span>•</span>
-                        <span>{event.soldTickets.toLocaleString()} attending</span>
-                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -248,9 +229,6 @@ export function EventDetailPage() {
                       </div>
                       <p className="text-sm text-muted-foreground">Event Organizer</p>
                     </div>
-                    <Button variant="outline" size="sm">
-                      Follow
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -269,9 +247,6 @@ export function EventDetailPage() {
               <h2 className="text-2xl font-display font-bold text-foreground">
                 Choose Your Tickets
               </h2>
-              <p className="text-sm text-muted-foreground">
-                Select authentic tickets for an unforgettable experience
-              </p>
             </div>
 
             {/* Ticket grid — 1 col on mobile, 2 col on tablet+ */}
@@ -286,30 +261,14 @@ export function EventDetailPage() {
                   <PrintedTicket
                     event={event}
                     ticketType={ticketType}
-                    quantity={ticketQuantities[ticketType.id] || 0}
+                    quantity={getTicketQuantity(ticketType.id)}
                     onQuantityChange={(change) => updateQuantity(ticketType.id, change)}
-                    isSelected={ticketQuantities[ticketType.id] > 0}
+                    isSelected={getTicketQuantity(ticketType.id) > 0}
                   />
                 </motion.div>
               ))}
             </div>
 
-
-            {/* Trust Indicators */}
-            <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <CheckCircle className="w-3 h-3 text-green-500" />
-                <span>Secure</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <CheckCircle className="w-3 h-3 text-green-500" />
-                <span>Authentic</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <CheckCircle className="w-3 h-3 text-green-500" />
-                <span>Instant</span>
-              </div>
-            </div>
           </motion.div>
         </div>
       </div>
@@ -322,28 +281,23 @@ export function EventDetailPage() {
         transition={{ delay: 0.5, type: 'spring', stiffness: 300, damping: 30 }}
       >
         <div className="max-w-6xl mx-auto flex items-center gap-3">
-          {getTotalTickets() > 0 ? (
+          {totalTickets > 0 ? (
             <>
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground">
-                  {getTotalTickets()} ticket{getTotalTickets() !== 1 ? 's' : ''} selected
+                  {totalTickets} ticket{totalTickets !== 1 ? 's' : ''} in cart
                 </p>
                 <p className="font-bold text-foreground text-lg leading-tight">
-                  {formatPrice(getTotalPrice())}
+                  {formatPrice(totalPrice)}
                 </p>
               </div>
               <Button
                 size="lg"
                 className="relative overflow-hidden px-8"
-                onClick={handleAddToCart}
+                onClick={() => navigate('/checkout')}
               >
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                  initial={{ x: '-100%' }}
-                  animate={{ x: '100%' }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                />
-                <span className="relative z-10">Add to Cart</span>
+                <ShoppingCart className="w-4 h-4 mr-2" />
+                <span>Checkout ({totalTickets})</span>
               </Button>
             </>
           ) : (

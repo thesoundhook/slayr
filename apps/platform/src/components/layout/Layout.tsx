@@ -40,7 +40,7 @@ export function Layout({ children }: LayoutProps) {
       <Navbar />
 
       {/* Main Content */}
-      <main className="relative" style={{ zIndex: 10 }}>
+      <main className="relative pt-16" style={{ zIndex: 10 }}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

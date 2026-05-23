@@ -35,6 +35,7 @@ export interface DbTicketType {
   sales_start: string | null
   sales_end: string | null
   type: 'general' | 'vip' | 'early-bird' | 'group'
+  is_archived: boolean
   created_at: string
 }
 

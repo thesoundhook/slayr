@@ -64,6 +64,29 @@ export async function getOrdersByEvent(eventId: string) {
   return data as OrderWithDetails[]
 }
 
+export async function getTicketByQrCode(qrCode: string) {
+  const { data, error } = await supabase
+    .from('tickets')
+    .select(`
+      *,
+      orders(customer_first_name, customer_last_name, customer_email),
+      ticket_types(name, type),
+      events(title)
+    `)
+    .eq('qr_code', qrCode)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
+export async function markTicketUsed(ticketId: string) {
+  const { error } = await supabase
+    .from('tickets')
+    .update({ used: true, used_at: new Date().toISOString() })
+    .eq('id', ticketId)
+  if (error) throw error
+}
+
 export async function getTicketsByEvent(eventId: string) {
   const { data, error } = await supabase
     .from('tickets')

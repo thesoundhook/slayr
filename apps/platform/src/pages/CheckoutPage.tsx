@@ -21,7 +21,7 @@ export function CheckoutPage() {
     phone: '',
   })
 
-  const fees = getTotalPrice() * 0.1
+  const fees = getTotalPrice() * 0.05
   const total = getTotalPrice() + fees
 
   if (items.length === 0) {
@@ -131,11 +131,8 @@ export function CheckoutPage() {
           </motion.div>
 
           <h1 className="text-3xl md:text-4xl font-display font-bold mt-6 text-foreground">
-            Secure Checkout
+            Checkout
           </h1>
-          <p className="text-muted-foreground mt-2">
-            Complete your purchase to receive your digital tickets instantly
-          </p>
         </motion.div>
 
         <form onSubmit={handlePaystack}>
@@ -197,8 +194,8 @@ export function CheckoutPage() {
                 transition={{ delay: 0.2 }}
                 className="text-sm text-muted-foreground p-4 rounded-xl bg-muted/30 border border-border/50"
               >
-                <p className="font-medium text-foreground mb-1">Secure payment via Paystack</p>
-                <p>You'll be taken to Paystack's secure checkout to complete payment. We never store your card details.</p>
+                <p className="font-medium text-foreground mb-1">Payment via Paystack</p>
+                <p>You'll be taken to Paystack's checkout to complete payment. We never store your card details.</p>
               </motion.div>
             </div>
 
@@ -252,7 +249,7 @@ export function CheckoutPage() {
                         <span>{formatPrice(getTotalPrice())}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span>Service fees (10%)</span>
+                        <span>Service fees (5%)</span>
                         <span>{formatPrice(fees)}</span>
                       </div>
                       <div className="flex justify-between font-semibold text-lg pt-2 border-t border-border/50">
@@ -282,24 +279,6 @@ export function CheckoutPage() {
                       )}
                     </Button>
 
-                    {/* Security & Guarantees */}
-                    <div className="space-y-2 text-xs text-muted-foreground">
-                      <div className="flex items-center justify-center gap-2">
-                        <CheckCircle className="w-3 h-3 text-green-500" />
-                        <span>256-bit SSL encryption</span>
-                      </div>
-                      <div className="flex items-center justify-center gap-2">
-                        <CheckCircle className="w-3 h-3 text-green-500" />
-                        <span>100% secure payment processing</span>
-                      </div>
-                      <div className="flex items-center justify-center gap-2">
-                        <CheckCircle className="w-3 h-3 text-green-500" />
-                        <span>Instant ticket delivery</span>
-                      </div>
-                      <p className="text-center pt-2">
-                        Free cancellation until 24 hours before event
-                      </p>
-                    </div>
                   </CardContent>
                 </Card>
               </motion.div>

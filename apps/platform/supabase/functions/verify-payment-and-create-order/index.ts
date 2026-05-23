@@ -35,58 +35,78 @@ function buildEmailHtml(params: {
   const { customerName, eventTitle, eventDate, eventTime, venueName, venueAddress, orderId, tickets } = params
 
   const ticketCards = tickets.map(t => `
-    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:24px;margin-bottom:16px;text-align:center;">
-      <p style="margin:0 0 4px;font-size:13px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">${t.typeName}</p>
-      <p style="margin:0 0 16px;font-size:12px;color:#9ca3af;">Ticket ${t.index} of ${tickets.length}</p>
-      <img src="${qrUrl(t.qrCode)}" width="160" height="160" alt="QR Code" style="display:block;margin:0 auto 12px;border-radius:8px;" />
-      <p style="margin:0;font-family:monospace;font-size:11px;color:#6b7280;word-break:break-all;">${t.qrCode}</p>
-    </div>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:12px;border-radius:12px;overflow:hidden;border:1px solid #e2dff5;">
+      <tr>
+        <!-- Left perforated strip -->
+        <td width="8" style="background:#f0edfb;"></td>
+        <!-- Main body -->
+        <td style="padding:20px 20px 20px 16px;background:#ffffff;vertical-align:top;">
+          <p style="margin:0 0 2px;font-size:11px;font-weight:700;color:#7c6fc4;text-transform:uppercase;letter-spacing:0.08em;">${t.typeName}</p>
+          <p style="margin:0 0 14px;font-size:18px;font-weight:700;color:#1a1333;line-height:1.3;">${eventTitle}</p>
+          <table cellpadding="0" cellspacing="0" style="font-size:12px;color:#6b7280;">
+            <tr><td style="padding:2px 8px 2px 0;white-space:nowrap;">📅</td><td>${eventDate}</td></tr>
+            <tr><td style="padding:2px 8px 2px 0;">🕐</td><td>${eventTime}</td></tr>
+            <tr><td style="padding:2px 8px 2px 0;">📍</td><td>${venueName}, ${venueAddress}</td></tr>
+          </table>
+        </td>
+        <!-- Dashed divider -->
+        <td width="1" style="border-left:2px dashed #d4cff0;"></td>
+        <!-- QR stub -->
+        <td width="100" style="background:#3d2e8c;padding:16px 12px;text-align:center;vertical-align:middle;border-radius:0 10px 10px 0;">
+          <img src="${qrUrl(t.qrCode)}" width="72" height="72" alt="QR" style="display:block;margin:0 auto 8px;border-radius:4px;background:#fff;padding:4px;" />
+          <p style="margin:0;font-size:9px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.12em;">Ticket ${t.index}/${tickets.length}</p>
+        </td>
+      </tr>
+    </table>
   `).join('')
 
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <div style="max-width:600px;margin:0 auto;padding:24px 16px;">
+<body style="margin:0;padding:0;background:#f5f2ee;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:560px;margin:0 auto;padding:32px 16px;">
 
-    <!-- Header -->
-    <div style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border-radius:16px;padding:32px 24px;text-align:center;margin-bottom:24px;">
-      <p style="margin:0 0 8px;color:rgba(255,255,255,0.7);font-size:13px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;">Your tickets are confirmed</p>
-      <h1 style="margin:0;color:#fff;font-size:26px;font-weight:700;line-height:1.2;">${eventTitle}</h1>
+    <!-- Wordmark -->
+    <div style="text-align:center;margin-bottom:28px;">
+      <span style="font-size:22px;font-weight:800;color:#3d2e8c;letter-spacing:-0.5px;">slayr</span>
     </div>
 
-    <!-- Greeting -->
-    <p style="margin:0 0 20px;font-size:15px;color:#374151;">Hi <strong>${customerName}</strong>, your payment was successful. Present the QR code(s) below at the entrance.</p>
+    <!-- Hero card -->
+    <div style="background:#3d2e8c;border-radius:16px;padding:28px 24px;text-align:center;margin-bottom:20px;">
+      <p style="margin:0 0 6px;font-size:11px;font-weight:600;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.12em;">Booking confirmed</p>
+      <h1 style="margin:0 0 10px;font-size:22px;font-weight:800;color:#ffffff;line-height:1.25;">${eventTitle}</h1>
+      <p style="margin:0;font-size:14px;color:rgba(255,255,255,0.75);">Hi ${customerName}, your tickets are ready.</p>
+    </div>
 
-    <!-- Event details -->
-    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px 24px;margin-bottom:24px;">
-      <table style="width:100%;border-collapse:collapse;">
+    <!-- Event details pill row -->
+    <div style="background:#ffffff;border-radius:12px;padding:16px 20px;margin-bottom:20px;border:1px solid #e8e4f0;">
+      <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
-          <td style="padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:13px;color:#6b7280;width:40%;">Date</td>
-          <td style="padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:14px;color:#111827;font-weight:500;">${eventDate}</td>
+          <td style="padding:6px 0;border-bottom:1px solid #f3f0fb;font-size:12px;color:#9896a4;width:36%;">Date</td>
+          <td style="padding:6px 0;border-bottom:1px solid #f3f0fb;font-size:13px;color:#1a1333;font-weight:600;">${eventDate}</td>
         </tr>
         <tr>
-          <td style="padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:13px;color:#6b7280;">Time</td>
-          <td style="padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:14px;color:#111827;font-weight:500;">${eventTime}</td>
+          <td style="padding:6px 0;border-bottom:1px solid #f3f0fb;font-size:12px;color:#9896a4;">Time</td>
+          <td style="padding:6px 0;border-bottom:1px solid #f3f0fb;font-size:13px;color:#1a1333;font-weight:600;">${eventTime}</td>
         </tr>
         <tr>
-          <td style="padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:13px;color:#6b7280;">Venue</td>
-          <td style="padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:14px;color:#111827;font-weight:500;">${venueName}</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;font-size:13px;color:#6b7280;">Address</td>
-          <td style="padding:8px 0;font-size:14px;color:#111827;">${venueAddress}</td>
+          <td style="padding:6px 0;font-size:12px;color:#9896a4;">Venue</td>
+          <td style="padding:6px 0;font-size:13px;color:#1a1333;font-weight:600;">${venueName}</td>
         </tr>
       </table>
     </div>
 
+    <!-- Instruction -->
+    <p style="margin:0 0 16px;font-size:13px;color:#6b6880;text-align:center;">Present the QR code${tickets.length > 1 ? 's' : ''} below at the entrance.</p>
+
     <!-- Tickets -->
-    <h2 style="margin:0 0 12px;font-size:16px;font-weight:600;color:#111827;">Your Tickets (${tickets.length})</h2>
     ${ticketCards}
 
-    <!-- Order ref -->
-    <p style="margin:24px 0 0;font-size:12px;color:#9ca3af;text-align:center;">Order reference: <span style="font-family:monospace;">${orderId.slice(0, 8).toUpperCase()}</span></p>
-    <p style="margin:4px 0 0;font-size:12px;color:#9ca3af;text-align:center;">Sent by Slayr Events · <a href="mailto:ticket@opensaucery.africa" style="color:#7c3aed;text-decoration:none;">ticket@opensaucery.africa</a></p>
+    <!-- Footer -->
+    <div style="text-align:center;margin-top:28px;">
+      <p style="margin:0 0 4px;font-size:11px;color:#b0acbf;">Order ref: <span style="font-family:monospace;letter-spacing:0.05em;">${orderId.slice(0, 8).toUpperCase()}</span></p>
+      <p style="margin:0;font-size:11px;color:#b0acbf;">Sent by Slayr Events · <a href="mailto:ticket@opensaucery.africa" style="color:#3d2e8c;text-decoration:none;">ticket@opensaucery.africa</a></p>
+    </div>
 
   </div>
 </body>
@@ -158,7 +178,7 @@ serve(async (req) => {
     const subtotal = (items as any[]).reduce(
       (sum: number, i: any) => sum + i.unitPrice * i.quantity, 0
     )
-    const fees = Math.round(subtotal * 0.1)
+    const fees = Math.round(subtotal * 0.05)
     const total = subtotal + fees
 
     if (txn.amount !== total) {

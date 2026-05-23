@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Calendar, ShoppingBag, FileText, Users, MapPin, UserCircle } from 'lucide-react'
+import { LayoutDashboard, Calendar, ShoppingBag, FileText, Users, MapPin, UserCircle, ScanLine } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAdmin } from '@/context/AdminContext'
 
@@ -17,6 +17,7 @@ const superAdminGroups = [
       { to: '/venues', label: 'Venues', icon: MapPin, end: false },
       { to: '/organizers', label: 'Organizers', icon: UserCircle, end: false },
       { to: '/orders', label: 'Orders', icon: ShoppingBag, end: false },
+      { to: '/scan', label: 'Scan Tickets', icon: ScanLine, end: false },
     ],
   },
   {

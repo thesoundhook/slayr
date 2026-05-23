@@ -36,7 +36,7 @@ function mapDbEvent(row: DbEvent): Event {
     },
     images: row.images,
     tags: row.tags,
-    ticketTypes: (row.ticket_types ?? []).map(tt => ({
+    ticketTypes: (row.ticket_types ?? []).filter(tt => !tt.is_archived).map(tt => ({
       id: tt.id,
       name: tt.name,
       description: tt.description ?? undefined,

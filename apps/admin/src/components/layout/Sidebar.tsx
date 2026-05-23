@@ -1,8 +1,9 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Calendar, ShoppingBag, FileText } from 'lucide-react'
+import { LayoutDashboard, Calendar, ShoppingBag, FileText, Users, MapPin, UserCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useAdmin } from '@/context/AdminContext'
 
-const navGroups = [
+const superAdminGroups = [
   {
     label: 'Analytics',
     items: [
@@ -13,6 +14,8 @@ const navGroups = [
     label: 'Catalogue',
     items: [
       { to: '/events', label: 'Events', icon: Calendar, end: false },
+      { to: '/venues', label: 'Venues', icon: MapPin, end: false },
+      { to: '/organizers', label: 'Organizers', icon: UserCircle, end: false },
       { to: '/orders', label: 'Orders', icon: ShoppingBag, end: false },
     ],
   },
@@ -22,9 +25,27 @@ const navGroups = [
       { to: '/briefs', label: 'Briefs', icon: FileText, end: false },
     ],
   },
+  {
+    label: 'Settings',
+    items: [
+      { to: '/team', label: 'Team', icon: Users, end: false },
+    ],
+  },
+]
+
+const eventsViewerGroups = [
+  {
+    label: 'Catalogue',
+    items: [
+      { to: '/events', label: 'Events', icon: Calendar, end: false },
+    ],
+  },
 ]
 
 export default function Sidebar() {
+  const { role } = useAdmin()
+  const navGroups = role === 'super_admin' ? superAdminGroups : eventsViewerGroups
+
   return (
     <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
       <div className="flex items-center gap-3 px-5 py-4 border-b border-sidebar-border">

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   getEventById,
   getVenues,
@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import ImageUpload from '@/components/ui/ImageUpload'
-import { ArrowLeft, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import PageHero from '@/components/ui/PageHero'
 
@@ -50,10 +50,13 @@ function validate(form: EventFormData, tickets: TicketTypeFormData[]): FieldErro
   return errors
 }
 
+const DRAFT_KEY = 'eventFormDraft'
+
 export default function EventFormPage() {
   const { id } = useParams<{ id: string }>()
   const isEdit = Boolean(id)
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   const [venues, setVenues] = useState<{ id: string; name: string }[]>([])
   const [organizers, setOrganizers] = useState<{ id: string; name: string }[]>([])
@@ -85,12 +88,27 @@ export default function EventFormPage() {
   const autoCapacity = tickets.reduce((sum, t) => sum + (t.quantity || 0), 0)
 
   useEffect(() => {
+    const newVenueId = searchParams.get('newVenueId')
+    const newOrganizerId = searchParams.get('newOrganizerId')
+    const rawDraft = sessionStorage.getItem(DRAFT_KEY)
+    const draft = rawDraft ? JSON.parse(rawDraft) as { form: EventFormData; tickets: TicketTypeFormData[]; tagsStr: string } : null
+
     async function load() {
       const [v, o] = await Promise.all([getVenues(), getOrganizers()])
       setVenues(v)
       setOrganizers(o)
 
-      if (isEdit && id) {
+      // Returning from venue/organizer creation — restore saved draft
+      if (draft && (newVenueId || newOrganizerId)) {
+        sessionStorage.removeItem(DRAFT_KEY)
+        setForm({
+          ...draft.form,
+          ...(newVenueId ? { venue_id: newVenueId } : {}),
+          ...(newOrganizerId ? { organizer_id: newOrganizerId } : {}),
+        })
+        setTickets(draft.tickets)
+        setTagsStr(draft.tagsStr)
+      } else if (isEdit && id) {
         const event = await getEventById(id)
         setForm({
           title: event.title,
@@ -128,7 +146,7 @@ export default function EventFormPage() {
       setLoading(false)
     }
     load().catch(console.error)
-  }, [id, isEdit])
+  }, [id, isEdit]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -179,6 +197,13 @@ export default function EventFormPage() {
       return next
     })
   }
+
+  const saveDraftAndNavigate = (destination: string) => {
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ form, tickets, tagsStr }))
+    navigate(destination)
+  }
+
+  const returnTo = isEdit ? `/events/${id}/edit` : '/events/new'
 
   const field = (key: string) => fieldErrors[key]
 
@@ -272,7 +297,15 @@ export default function EventFormPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Venue" error={field('venue_id')}>
+            <Field
+              label="Venue"
+              error={field('venue_id')}
+              action={
+                <button type="button" onClick={() => saveDraftAndNavigate(`/venues/new?returnTo=${encodeURIComponent(returnTo)}&returnParam=newVenueId`)} className="flex items-center gap-1 text-xs text-primary hover:underline">
+                  <ExternalLink className="h-3 w-3" /> New venue
+                </button>
+              }
+            >
               <Select
                 value={form.venue_id}
                 onChange={v => setForm(f => ({ ...f, venue_id: v }))}
@@ -280,7 +313,15 @@ export default function EventFormPage() {
                 className={cn(field('venue_id') && 'border-destructive')}
               />
             </Field>
-            <Field label="Organizer" error={field('organizer_id')}>
+            <Field
+              label="Organizer"
+              error={field('organizer_id')}
+              action={
+                <button type="button" onClick={() => saveDraftAndNavigate(`/organizers/new?returnTo=${encodeURIComponent(returnTo)}&returnParam=newOrganizerId`)} className="flex items-center gap-1 text-xs text-primary hover:underline">
+                  <ExternalLink className="h-3 w-3" /> New organizer
+                </button>
+              }
+            >
               <Select
                 value={form.organizer_id}
                 onChange={v => setForm(f => ({ ...f, organizer_id: v }))}
@@ -488,10 +529,13 @@ export default function EventFormPage() {
 
 // ── Small helpers ─────────────────────────────────────────────────────────────
 
-function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+function Field({ label, error, action, children }: { label: string; error?: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-sm font-medium">{label}</label>
+      <div className="flex items-center justify-between">
+        <label className="text-sm font-medium">{label}</label>
+        {action}
+      </div>
       {children}
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>

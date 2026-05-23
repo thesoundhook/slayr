@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import type { DbEvent, DbTicketType } from '@/types/database'
+import type { DbEvent, DbTicketType, DbVenue, DbOrganizer } from '@/types/database'
 
 export async function getEvents() {
   const { data, error } = await supabase
@@ -161,13 +161,78 @@ export async function deleteEvent(id: string) {
 export async function getVenues() {
   const { data, error } = await supabase.from('venues').select('*').order('name')
   if (error) throw error
-  return data
+  return data as DbVenue[]
+}
+
+export interface VenueFormData {
+  name: string
+  address: string
+  city: string
+  state: string
+  country: string
+  capacity: number
+  has_seating_chart: boolean
+}
+
+export async function createVenue(data: VenueFormData) {
+  const { data: venue, error } = await supabase.from('venues').insert(data).select().single()
+  if (error) throw error
+  return venue as DbVenue
+}
+
+export async function updateVenue(id: string, data: Partial<VenueFormData>) {
+  const { data: venue, error } = await supabase.from('venues').update(data).eq('id', id).select().single()
+  if (error) throw error
+  return venue as DbVenue
+}
+
+export async function deleteVenue(id: string) {
+  const { count } = await supabase
+    .from('events')
+    .select('*', { count: 'exact', head: true })
+    .eq('venue_id', id)
+  if (count && count > 0) {
+    throw new Error(`Cannot delete — ${count} event(s) use this venue.`)
+  }
+  const { error } = await supabase.from('venues').delete().eq('id', id)
+  if (error) throw new Error(error.message)
 }
 
 export async function getOrganizers() {
   const { data, error } = await supabase.from('organizers').select('*').order('name')
   if (error) throw error
-  return data
+  return data as DbOrganizer[]
+}
+
+export interface OrganizerFormData {
+  name: string
+  logo_url: string | null
+  description: string | null
+  verified: boolean
+}
+
+export async function createOrganizer(data: OrganizerFormData) {
+  const { data: org, error } = await supabase.from('organizers').insert(data).select().single()
+  if (error) throw error
+  return org as DbOrganizer
+}
+
+export async function updateOrganizer(id: string, data: Partial<OrganizerFormData>) {
+  const { data: org, error } = await supabase.from('organizers').update(data).eq('id', id).select().single()
+  if (error) throw error
+  return org as DbOrganizer
+}
+
+export async function deleteOrganizer(id: string) {
+  const { count } = await supabase
+    .from('events')
+    .select('*', { count: 'exact', head: true })
+    .eq('organizer_id', id)
+  if (count && count > 0) {
+    throw new Error(`Cannot delete — ${count} event(s) use this organizer.`)
+  }
+  const { error } = await supabase.from('organizers').delete().eq('id', id)
+  if (error) throw new Error(error.message)
 }
 
 export async function getTicketTypesByEvent(eventId: string) {

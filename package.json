@@ -1,0 +1,17 @@
+{
+  "name": "slayr",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/platform & npm run dev --workspace=apps/admin",
+    "dev:platform": "npm run dev --workspace=apps/platform",
+    "dev:admin": "npm run dev --workspace=apps/admin",
+    "build": "npm run build --workspaces --if-present",
+    "build:platform": "npm run build --workspace=apps/platform",
+    "build:admin": "npm run build --workspace=apps/admin",
+    "lint": "npm run lint --workspaces --if-present"
+  }
+}

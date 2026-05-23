@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/Input'
 import PageHero from '@/components/ui/PageHero'
 import { getTicketByQrCode, markTicketUsed } from '@/services/orderService'
 import type { DbTicket } from '@/types/database'
+import jsQR from 'jsqr'
 
 type ScannedTicket = DbTicket & {
   orders: { customer_first_name: string; customer_last_name: string; customer_email: string } | null
@@ -22,8 +23,10 @@ export default function ScanPage() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<ScanResult | null>(null)
   const [cameraActive, setCameraActive] = useState(false)
-  const [cameraSupported] = useState(() => 'BarcodeDetector' in window && 'mediaDevices' in navigator)
+  const [cameraSupported] = useState(() => 'mediaDevices' in navigator)
+  const useNativeDetector = 'BarcodeDetector' in window
   const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const animFrameRef = useRef<number | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -80,16 +83,38 @@ export default function ScanPage() {
 
   const scanFrame = async () => {
     if (!videoRef.current || hasScannedRef.current) return
-    try {
-      const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] })
-      const codes = await detector.detect(videoRef.current)
-      if (codes.length > 0) {
-        hasScannedRef.current = true
-        stopCamera()
-        lookup(codes[0].rawValue)
-        return
+
+    let found: string | null = null
+
+    if (useNativeDetector) {
+      try {
+        const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] })
+        const codes = await detector.detect(videoRef.current)
+        if (codes.length > 0) found = codes[0].rawValue
+      } catch {}
+    } else {
+      const video = videoRef.current
+      const canvas = canvasRef.current
+      if (canvas && video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width = video.videoWidth
+        canvas.height = video.videoHeight
+        const ctx = canvas.getContext('2d')
+        if (ctx) {
+          ctx.drawImage(video, 0, 0)
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+          const code = jsQR(imageData.data, imageData.width, imageData.height)
+          if (code) found = code.data
+        }
       }
-    } catch {}
+    }
+
+    if (found) {
+      hasScannedRef.current = true
+      stopCamera()
+      lookup(found)
+      return
+    }
+
     animFrameRef.current = requestAnimationFrame(scanFrame)
   }
 
@@ -151,6 +176,7 @@ export default function ScanPage() {
             <div className="space-y-2">
               <div className="relative rounded-lg overflow-hidden bg-black aspect-video">
                 <video ref={videoRef} className="w-full h-full object-cover" muted playsInline />
+                <canvas ref={canvasRef} className="hidden" />
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <ScanLine className="h-16 w-16 text-white/60 animate-pulse" />
                 </div>

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { ArrowLeft } from 'lucide-react'
 import PageHero from '@/components/ui/PageHero'
+import LogoUpload from '@/components/ui/LogoUpload'
 
 const empty: OrganizerFormData = {
   name: '',
@@ -120,15 +121,8 @@ export default function OrganizerFormPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Logo URL</label>
-                <Input
-                  value={form.logo_url ?? ''}
-                  onChange={e => set('logo_url', e.target.value || null)}
-                  placeholder="https://example.com/logo.png"
-                />
-                {form.logo_url && (
-                  <img src={form.logo_url} alt="Logo preview" className="mt-2 h-10 w-10 rounded-full object-cover border" />
-                )}
+                <label className="block text-sm font-medium mb-2">Logo</label>
+                <LogoUpload value={form.logo_url} onChange={url => set('logo_url', url)} />
               </div>
 
               <div>

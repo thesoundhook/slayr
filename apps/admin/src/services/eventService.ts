@@ -17,7 +17,11 @@ export async function getEventById(id: string) {
     .eq('id', id)
     .single()
   if (error) throw error
-  return data as DbEvent
+  const event = data as DbEvent
+  if (event.ticket_types) {
+    event.ticket_types = event.ticket_types.filter(tt => !tt.is_archived)
+  }
+  return event
 }
 
 export interface EventFormData {
@@ -75,17 +79,66 @@ export async function updateEvent(id: string, eventData: Partial<EventFormData>,
     .single()
   if (eventError) throw eventError
 
-  // Delete existing ticket types and reinsert
-  await supabase.from('ticket_types').delete().eq('event_id', id)
+  const keptIds = ticketTypes.map(tt => tt.id).filter(Boolean) as string[]
 
-  if (ticketTypes.length > 0) {
-    const { error: ttError } = await supabase
+  // Find ticket types for this event that the user removed from the form
+  const removedQuery = supabase
+    .from('ticket_types')
+    .select('id')
+    .eq('event_id', id)
+    .eq('is_archived', false)
+  if (keptIds.length > 0) removedQuery.not('id', 'in', `(${keptIds.join(',')})`)
+  const { data: removedRows, error: removedError } = await removedQuery
+  if (removedError) throw removedError
+
+  if (removedRows && removedRows.length > 0) {
+    const removedIds = removedRows.map(r => r.id)
+
+    // Ticket types that have orders must be soft-deleted (archived) to preserve the FK
+    const { data: orderedRows, error: orderedError } = await supabase
+      .from('order_items')
+      .select('ticket_type_id')
+      .in('ticket_type_id', removedIds)
+    if (orderedError) throw orderedError
+
+    const orderedIds = new Set((orderedRows ?? []).map(r => r.ticket_type_id))
+    const hardDeleteIds = removedIds.filter(rid => !orderedIds.has(rid))
+    const archiveIds = removedIds.filter(rid => orderedIds.has(rid))
+
+    if (hardDeleteIds.length > 0) {
+      const { error: deleteError } = await supabase
+        .from('ticket_types')
+        .delete()
+        .in('id', hardDeleteIds)
+      if (deleteError) throw deleteError
+    }
+
+    if (archiveIds.length > 0) {
+      const { error: archiveError } = await supabase
+        .from('ticket_types')
+        .update({ is_archived: true })
+        .in('id', archiveIds)
+      if (archiveError) throw archiveError
+    }
+  }
+
+  const toInsert = ticketTypes.filter(tt => !tt.id)
+  const toUpdate = ticketTypes.filter(tt => tt.id)
+
+  if (toInsert.length > 0) {
+    const { error: insertError } = await supabase
       .from('ticket_types')
-      .insert(ticketTypes.map(tt => {
-        const { id: _id, ...rest } = tt
-        return { ...rest, event_id: id, sold: 0 }
-      }))
-    if (ttError) throw ttError
+      .insert(toInsert.map(({ id: _id, ...rest }) => ({ ...rest, event_id: id, sold: 0, is_archived: false })))
+    if (insertError) throw insertError
+  }
+
+  for (const tt of toUpdate) {
+    const { id: ttId, ...rest } = tt
+    const { error: updateError } = await supabase
+      .from('ticket_types')
+      .update({ ...rest, event_id: id })
+      .eq('id', ttId!)
+    if (updateError) throw updateError
   }
 
   return event as DbEvent

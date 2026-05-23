@@ -53,14 +53,14 @@ export default function VenuesPage() {
           </Button>
         }
       />
-      <div className="p-6 space-y-4">
+      <div className="p-4 sm:p-6 space-y-4">
         {error && (
           <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {error}
           </div>
         )}
-        <div className="flex items-center gap-3">
-          <div className="relative max-w-64 flex-1">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative w-full sm:max-w-64 sm:flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
               value={search}

@@ -113,28 +113,63 @@ function buildEmailHtml(params: {
 </html>`
 }
 
-async function sendTicketEmail(params: Parameters<typeof buildEmailHtml>[0] & { toEmail: string }) {
+async function sendTicketEmail(
+  params: Parameters<typeof buildEmailHtml>[0] & { toEmail: string },
+  log: (msg: string, extra?: Record<string, unknown>) => void,
+) {
   const { toEmail, customerName, eventTitle, ...rest } = params
   const html = buildEmailHtml({ customerName, eventTitle, ...rest })
 
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: 'Slayr Events <ticket@opensaucery.africa>',
-      to: toEmail,
-      subject: `Your tickets for ${eventTitle} 🎟️`,
-      html,
-    }),
+  log('[email] preparing Resend request', {
+    toEmail,
+    eventTitle,
+    ticketCount: params.tickets.length,
+    htmlLength: html.length,
+    hasResendKey: !!RESEND_API_KEY,
+    resendKeyPrefix: RESEND_API_KEY ? RESEND_API_KEY.slice(0, 6) + '...' : null,
   })
 
-  if (!res.ok) {
-    const body = await res.text()
-    throw new Error(`Resend error ${res.status}: ${body}`)
+  const startedAt = Date.now()
+  let res: Response
+  try {
+    res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'Slayr Events <ticket@opensaucery.africa>',
+        to: toEmail,
+        subject: `Your tickets for ${eventTitle} 🎟️`,
+        html,
+      }),
+    })
+  } catch (fetchErr) {
+    log('[email] fetch to Resend threw before response', {
+      durationMs: Date.now() - startedAt,
+      error: (fetchErr as Error).message,
+    })
+    throw fetchErr
   }
+
+  const durationMs = Date.now() - startedAt
+  const responseBody = await res.text()
+
+  if (!res.ok) {
+    log('[email] Resend returned non-2xx', {
+      status: res.status,
+      durationMs,
+      body: responseBody,
+    })
+    throw new Error(`Resend error ${res.status}: ${responseBody}`)
+  }
+
+  log('[email] Resend accepted email', {
+    status: res.status,
+    durationMs,
+    body: responseBody,
+  })
 }
 
 serve(async (req) => {
@@ -142,28 +177,58 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  const reqId = crypto.randomUUID().slice(0, 8)
+  const startedAt = Date.now()
+  const log = (msg: string, extra?: Record<string, unknown>) => {
+    console.log(`[verify-payment][${reqId}] ${msg}`, extra ? JSON.stringify(extra) : '')
+  }
+
+  log('--- request received', {
+    method: req.method,
+    hasPaystackKey: !!PAYSTACK_SECRET_KEY,
+    hasSupabaseUrl: !!SUPABASE_URL,
+    hasServiceRoleKey: !!SUPABASE_SERVICE_ROLE_KEY,
+    hasResendKey: !!RESEND_API_KEY,
+  })
+
   try {
     const { reference, customer, items } = await req.json()
+    log('step 0: parsed body', {
+      reference,
+      customerEmail: customer?.email,
+      customerFirstName: customer?.firstName,
+      customerLastName: customer?.lastName,
+      itemCount: items?.length,
+    })
 
     if (!reference || !customer?.email || !items?.length) {
+      log('step 0: missing required fields — bailing')
       return json({ error: 'Missing required fields' }, 400)
     }
 
     // 1. Verify payment with Paystack
+    log('step 1: verifying payment with Paystack', { reference })
     const verifyRes = await fetch(
       `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
       { headers: { Authorization: `Bearer ${PAYSTACK_SECRET_KEY}` } }
     )
     const verifyData = await verifyRes.json()
     const txn = verifyData?.data
+    log('step 1: Paystack response', {
+      httpStatus: verifyRes.status,
+      paystackStatus: txn?.status,
+      amount: txn?.amount,
+    })
 
     if (!txn || txn.status !== 'success') {
+      log('step 1: payment verification failed — bailing')
       return json({ error: 'Payment verification failed' }, 400)
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
     // 2. Idempotency check
+    log('step 2: idempotency check')
     const { data: existingOrder } = await supabase
       .from('orders')
       .select('id')
@@ -171,8 +236,12 @@ serve(async (req) => {
       .maybeSingle()
 
     if (existingOrder) {
+      log('step 2: order already exists — short-circuiting (email NOT re-sent)', {
+        orderId: existingOrder.id,
+      })
       return json({ orderId: existingOrder.id })
     }
+    log('step 2: no existing order — proceeding')
 
     // 3. Verify amount
     const subtotal = (items as any[]).reduce(
@@ -180,12 +249,15 @@ serve(async (req) => {
     )
     const fees = Math.round(subtotal * 0.05)
     const total = subtotal + fees
+    log('step 3: computed totals', { subtotal, fees, total, paystackAmount: txn.amount })
 
     if (txn.amount !== total) {
+      log('step 3: amount mismatch — bailing')
       return json({ error: 'Amount mismatch' }, 400)
     }
 
     // 4. Create order
+    log('step 4: inserting order')
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
@@ -203,7 +275,11 @@ serve(async (req) => {
       .select('id')
       .single()
 
-    if (orderError) throw orderError
+    if (orderError) {
+      log('step 4: order insert failed', { error: orderError.message })
+      throw orderError
+    }
+    log('step 4: order created', { orderId: order.id })
 
     // 5. Create order items
     const orderItemRows = (items as any[]).map((i: any) => ({
@@ -214,13 +290,18 @@ serve(async (req) => {
       unit_price: i.unitPrice,
       total_price: i.unitPrice * i.quantity,
     }))
+    log('step 5: inserting order items', { count: orderItemRows.length })
 
     const { data: createdItems, error: itemsError } = await supabase
       .from('order_items')
       .insert(orderItemRows)
       .select('id, ticket_type_id, quantity')
 
-    if (itemsError) throw itemsError
+    if (itemsError) {
+      log('step 5: order_items insert failed', { error: itemsError.message })
+      throw itemsError
+    }
+    log('step 5: order items created', { count: createdItems?.length })
 
     // 6. Generate individual tickets
     const ticketRows: any[] = []
@@ -236,36 +317,91 @@ serve(async (req) => {
         })
       }
     }
+    log('step 6: inserting tickets', { count: ticketRows.length })
 
     const { error: ticketsError } = await supabase.from('tickets').insert(ticketRows)
-    if (ticketsError) throw ticketsError
+    if (ticketsError) {
+      log('step 6: tickets insert failed', { error: ticketsError.message })
+      throw ticketsError
+    }
+    log('step 6: tickets created')
 
     // 7. Increment sold counts
+    log('step 7: incrementing sold counts', { count: (items as any[]).length })
     for (const i of items as any[]) {
       const { error: rpcError } = await supabase.rpc('increment_sold', {
         p_ticket_type_id: i.ticketTypeId,
         p_quantity: i.quantity,
       })
-      if (rpcError) throw rpcError
+      if (rpcError) {
+        log('step 7: increment_sold rpc failed', {
+          ticketTypeId: i.ticketTypeId,
+          error: rpcError.message,
+        })
+        throw rpcError
+      }
     }
+    log('step 7: sold counts incremented')
 
     // 8. Send ticket email (non-fatal — order is already confirmed)
+    log('step 8: starting email flow')
     try {
-      // Fetch event + venue details for the email
+      if (!RESEND_API_KEY) {
+        log('step 8: ABORTING — RESEND_API_KEY env var is not set')
+        throw new Error('RESEND_API_KEY env var is not set')
+      }
+
       const eventId = (items as any[])[0].eventId
-      const { data: eventData } = await supabase
+      log('step 8a: fetching event', { eventId })
+      const { data: eventData, error: eventErr } = await supabase
         .from('events')
-        .select('title, date, time, venues(name, address, city)')
+        .select('title, date, time, venue_id')
         .eq('id', eventId)
-        .single()
+        .maybeSingle()
+
+      if (eventErr) {
+        log('step 8a: event fetch error', {
+          code: eventErr.code,
+          message: eventErr.message,
+          details: eventErr.details,
+          hint: eventErr.hint,
+        })
+      }
+      log('step 8a: event fetch result', {
+        found: !!eventData,
+        title: eventData?.title,
+        date: eventData?.date,
+        time: eventData?.time,
+        venue_id: (eventData as any)?.venue_id,
+      })
 
       if (eventData) {
-        const venue = (eventData as any).venues
+        log('step 8a2: fetching venue', { venue_id: (eventData as any).venue_id })
+        const { data: venue, error: venueErr } = await supabase
+          .from('venues')
+          .select('name, address, city')
+          .eq('id', (eventData as any).venue_id)
+          .maybeSingle()
+
+        if (venueErr) {
+          log('step 8a2: venue fetch error', {
+            code: venueErr.code,
+            message: venueErr.message,
+          })
+        }
+        log('step 8a2: venue fetch result', { found: !!venue, name: venue?.name })
+
         const ticketTypeIds = [...new Set(ticketRows.map(t => t.ticket_type_id))] as string[]
-        const { data: ticketTypes } = await supabase
+        log('step 8b: fetching ticket type names', { ticketTypeIds })
+        const { data: ticketTypes, error: ttErr } = await supabase
           .from('ticket_types')
           .select('id, name')
           .in('id', ticketTypeIds)
+
+        if (ttErr) {
+          log('step 8b: ticket_types fetch error', { error: ttErr.message })
+        }
+        log('step 8b: ticket types fetched', { count: ticketTypes?.length })
 
         const typeNameMap: Record<string, string> = {}
         for (const tt of ticketTypes ?? []) typeNameMap[tt.id] = tt.name
@@ -283,27 +419,48 @@ serve(async (req) => {
           hour: 'numeric', minute: '2-digit', hour12: true,
         })
 
-        await sendTicketEmail({
+        log('step 8c: calling sendTicketEmail', {
           toEmail: customer.email,
-          customerName: `${customer.firstName} ${customer.lastName}`,
           eventTitle: eventData.title,
-          eventDate: dateFormatted,
-          eventTime: timeFormatted,
-          venueName: venue?.name ?? '',
-          venueAddress: `${venue?.address ?? ''}, ${venue?.city ?? ''}`,
-          orderId: order.id,
-          tickets: emailTickets,
+          ticketCount: emailTickets.length,
         })
+
+        await sendTicketEmail(
+          {
+            toEmail: customer.email,
+            customerName: `${customer.firstName} ${customer.lastName}`,
+            eventTitle: eventData.title,
+            eventDate: dateFormatted,
+            eventTime: timeFormatted,
+            venueName: venue?.name ?? '',
+            venueAddress: `${venue?.address ?? ''}, ${venue?.city ?? ''}`,
+            orderId: order.id,
+            tickets: emailTickets,
+          },
+          log,
+        )
+        log('step 8: email flow completed successfully')
+      } else {
+        log('step 8: SKIPPING email — no event row found for eventId', { eventId })
       }
     } catch (emailErr) {
-      // Log but don't fail the order
-      console.error('Ticket email failed:', emailErr)
+      log('step 8: email flow FAILED (order still confirmed)', {
+        error: (emailErr as Error).message,
+        stack: (emailErr as Error).stack,
+      })
+      console.error(`[verify-payment][${reqId}] Ticket email failed:`, emailErr)
     }
 
+    log('--- done', { orderId: order.id, totalDurationMs: Date.now() - startedAt })
     return json({ orderId: order.id })
 
   } catch (err: any) {
-    console.error('verify-payment-and-create-order error:', err)
+    log('--- FATAL error', {
+      error: err?.message,
+      stack: err?.stack,
+      totalDurationMs: Date.now() - startedAt,
+    })
+    console.error(`[verify-payment][${reqId}] verify-payment-and-create-order error:`, err)
     return json({ error: err.message ?? 'Internal server error' }, 500)
   }
 })

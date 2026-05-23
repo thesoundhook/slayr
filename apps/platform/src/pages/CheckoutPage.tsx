@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Mail, Lock, Ticket } from 'lucide-react'
@@ -24,10 +24,15 @@ export function CheckoutPage() {
   const fees = getTotalPrice() * 0.05
   const total = getTotalPrice() + fees
 
-  if (items.length === 0) {
-    navigate('/cart')
-    return null
-  }
+  // Track whether we navigated away intentionally so the empty-cart guard
+  // doesn't fire after clearCart() runs in handleOrderCreation.
+  const navigatedToOrder = useRef(false)
+
+  useEffect(() => {
+    if (items.length === 0 && !navigatedToOrder.current) {
+      navigate('/cart')
+    }
+  }, [items.length, navigate])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -53,8 +58,9 @@ export function CheckoutPage() {
 
       if (error) throw error
 
-      clearCart()
+      navigatedToOrder.current = true
       navigate(`/orders/${data.orderId}`)
+      clearCart()
     } catch (err: any) {
       setIsProcessing(false)
       alert(

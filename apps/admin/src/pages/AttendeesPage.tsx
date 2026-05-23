@@ -74,7 +74,7 @@ export default function AttendeesPage() {
           </>
         }
       />
-      <div className="p-6 space-y-4">
+      <div className="p-4 sm:p-6 space-y-4">
       {event && (
         <div>
           <h2 className="text-lg font-semibold">{event.title}</h2>

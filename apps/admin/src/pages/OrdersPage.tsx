@@ -40,8 +40,8 @@ export default function OrdersPage() {
         subtitle="Review all ticket purchases and transaction statuses."
         ghost="03"
       />
-      <div className="p-6 space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="p-4 sm:p-6 space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
         <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}

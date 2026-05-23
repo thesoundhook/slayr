@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { CheckCircle, Calendar, MapPin, Download, Home } from 'lucide-react'
+import QRCode from 'qrcode'
+import { CheckCircle, Calendar, MapPin, Download, Home, Loader2 } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
@@ -13,6 +14,9 @@ export function OrderConfirmationPage() {
   const [order, setOrder] = useState<OrderDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [qrDataUrls, setQrDataUrls] = useState<Record<string, string>>({})
+  const [downloading, setDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -24,6 +28,42 @@ export function OrderConfirmationPage() {
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
   }, [id])
+
+  useEffect(() => {
+    if (!order) return
+    let cancelled = false
+    Promise.all(
+      order.tickets.map(async t => [t.id, await QRCode.toDataURL(t.qrCode, {
+        errorCorrectionLevel: 'M',
+        margin: 1,
+        width: 256,
+        color: { dark: '#000000', light: '#FFFFFF' },
+      })] as const)
+    ).then(entries => {
+      if (cancelled) return
+      setQrDataUrls(Object.fromEntries(entries))
+    }).catch(() => { /* QR rendering best-effort */ })
+    return () => { cancelled = true }
+  }, [order])
+
+  const handleDownload = async () => {
+    if (!order) return
+    setDownloading(true)
+    setDownloadError(null)
+    try {
+      const { downloadTicketsPdf } = await import('../lib/ticketPdf')
+      await downloadTicketsPdf(order)
+    } catch (e) {
+      setDownloadError(e instanceof Error ? e.message : 'Could not generate PDF')
+    } finally {
+      setDownloading(false)
+    }
+  }
+
+  const totalTickets = useMemo(
+    () => order?.items.reduce((s, i) => s + i.quantity, 0) ?? 0,
+    [order]
+  )
 
   if (loading) {
     return (
@@ -123,35 +163,35 @@ export function OrderConfirmationPage() {
                         order.items.slice(0, itemIndex).reduce((s, i) => s + i.quantity, 0),
                         order.items.slice(0, itemIndex + 1).reduce((s, i) => s + i.quantity, 0)
                       )
-                      .map((ticket, tIndex) => (
-                        <div
-                          key={ticket.id}
-                          className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border/50"
-                        >
-                          <div className="space-y-1">
-                            <p className="text-sm font-medium">
-                              Ticket {itemIndex * item.quantity + tIndex + 1} of{' '}
-                              {order.items.reduce((s, i) => s + i.quantity, 0)}
-                            </p>
-                            <p className="text-xs text-muted-foreground font-mono">
-                              {ticket.qrCode.slice(0, 18).toUpperCase()}...
-                            </p>
-                          </div>
-                          {/* QR code placeholder — replace with a real QR lib if needed */}
-                          <div className="w-16 h-16 bg-foreground rounded-lg flex items-center justify-center shrink-0">
-                            <div className="w-12 h-12 bg-background rounded grid grid-cols-3 gap-0.5 p-0.5">
-                              {Array.from({ length: 9 }).map((_, i) => (
-                                <div
-                                  key={i}
-                                  className={`rounded-sm ${
-                                    [0, 2, 4, 6, 8].includes(i) ? 'bg-foreground' : 'bg-background'
-                                  }`}
-                                />
-                              ))}
+                      .map((ticket, tIndex) => {
+                        const ticketNumber =
+                          order.items.slice(0, itemIndex).reduce((s, i) => s + i.quantity, 0) +
+                          tIndex +
+                          1
+                        const qr = qrDataUrls[ticket.id]
+                        return (
+                          <div
+                            key={ticket.id}
+                            className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border/50"
+                          >
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium">
+                                Ticket {ticketNumber} of {totalTickets}
+                              </p>
+                              <p className="text-xs text-muted-foreground font-mono">
+                                {ticket.qrCode.slice(0, 18).toUpperCase()}...
+                              </p>
+                            </div>
+                            <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+                              {qr ? (
+                                <img src={qr} alt="Ticket QR code" className="w-full h-full" />
+                              ) : (
+                                <div className="w-8 h-8 animate-pulse bg-muted rounded" />
+                              )}
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                   </CardContent>
                 </Card>
               </motion.div>
@@ -199,22 +239,32 @@ export function OrderConfirmationPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="flex flex-col sm:flex-row gap-4"
+            className="space-y-3"
           >
-            <Link to="/events" className="flex-1">
-              <Button variant="outline" className="w-full">
-                <Home className="w-4 h-4 mr-2" />
-                Browse More Events
+            {downloadError && (
+              <p className="text-sm text-destructive text-center">{downloadError}</p>
+            )}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Link to="/events" className="flex-1">
+                <Button variant="outline" className="w-full">
+                  <Home className="w-4 h-4 mr-2" />
+                  Browse More Events
+                </Button>
+              </Link>
+              <Button
+                variant="default"
+                className="flex-1"
+                onClick={handleDownload}
+                disabled={downloading}
+              >
+                {downloading ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4 mr-2" />
+                )}
+                {downloading ? 'Preparing PDF…' : 'Download Tickets'}
               </Button>
-            </Link>
-            <Button
-              variant="default"
-              className="flex-1"
-              onClick={() => window.print()}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Save / Print Tickets
-            </Button>
+            </div>
           </motion.div>
         </div>
       </div>

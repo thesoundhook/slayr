@@ -225,7 +225,7 @@ export default function EventFormPage() {
           </Button>
         }
       />
-      <form onSubmit={handleSubmit} className="p-6 space-y-6 max-w-3xl">
+      <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-6 max-w-3xl">
 
       {/* Basic info */}
       <Card>

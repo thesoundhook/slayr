@@ -123,7 +123,7 @@ export default function ScanPage() {
         ghost="05"
       />
 
-      <div className="p-6 max-w-lg mx-auto space-y-4">
+      <div className="p-4 sm:p-6 max-w-lg mx-auto space-y-4">
         {/* Input row */}
         <div className="flex gap-2">
           <Input

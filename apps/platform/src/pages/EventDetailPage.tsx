@@ -217,8 +217,16 @@ export function EventDetailPage() {
               <Card className="border-0 bg-card/30 backdrop-blur-sm">
                 <CardContent className="p-6">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Users className="w-6 h-6 text-primary" />
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                      {event.organizer.logo ? (
+                        <img
+                          src={event.organizer.logo}
+                          alt={event.organizer.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Users className="w-6 h-6 text-primary" />
+                      )}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">

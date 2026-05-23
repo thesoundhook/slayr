@@ -204,7 +204,7 @@ export function EventsPage() {
                             <div
                               className="h-full bg-primary rounded-full transition-all duration-300"
                               style={{
-                                width: `${Math.max(10, Math.min(90, ((event.totalCapacity - event.soldTickets) / event.totalCapacity) * 100))}%`
+                                width: `${Math.min(100, ((event.totalCapacity - event.soldTickets) / event.totalCapacity) * 100)}%`
                               }}
                             />
                           </div>

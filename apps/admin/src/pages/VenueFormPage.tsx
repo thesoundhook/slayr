@@ -111,7 +111,7 @@ export default function VenueFormPage() {
           </Button>
         }
       />
-      <div className="p-6 max-w-2xl">
+      <div className="p-4 sm:p-6 max-w-2xl">
         <form onSubmit={handleSubmit} className="space-y-6">
           {submitError && (
             <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">

@@ -48,7 +48,7 @@ export default function OrderDetailPage() {
           </Button>
         }
       />
-      <div className="p-6 space-y-6 max-w-3xl">
+      <div className="p-4 sm:p-6 space-y-6 max-w-3xl">
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Card>

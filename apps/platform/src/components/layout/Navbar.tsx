@@ -1,37 +1,18 @@
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ShoppingCart, Moon, Sun } from 'lucide-react'
+import { ShoppingCart } from 'lucide-react'
 import { useCartStore } from '../../stores/cartStore'
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 
 export function Navbar() {
   const location = useLocation()
   const { items } = useCartStore()
   const cartItemsCount = items.reduce((sum, item) => sum + item.quantity, 0)
-  const [isDark, setIsDark] = useState(false)
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme')
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-
-    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-      setIsDark(true)
-      document.documentElement.classList.add('dark')
-    }
+    document.documentElement.classList.remove('dark')
+    localStorage.removeItem('theme')
   }, [])
-
-  const toggleTheme = () => {
-    const newTheme = !isDark
-    setIsDark(newTheme)
-
-    if (newTheme) {
-      document.documentElement.classList.add('dark')
-      localStorage.setItem('theme', 'dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-      localStorage.setItem('theme', 'light')
-    }
-  }
 
   const navItems = [
     { name: 'Home', path: '/', icon: null },
@@ -75,21 +56,6 @@ export function Navbar() {
 
           {/* Right side actions - Minimal */}
           <div className="flex items-center space-x-2">
-            {/* Theme Toggle */}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={toggleTheme}
-              className="p-2 rounded-lg hover:bg-muted/50 transition-colors"
-              aria-label="Toggle theme"
-            >
-              {isDark ? (
-                <Sun className="w-4 h-4 text-muted-foreground" />
-              ) : (
-                <Moon className="w-4 h-4 text-muted-foreground" />
-              )}
-            </motion.button>
-
             {/* Cart */}
             <Link to="/cart">
               <motion.div

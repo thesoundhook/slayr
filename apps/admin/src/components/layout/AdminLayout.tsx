@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import TopBar from './TopBar'
@@ -23,12 +24,17 @@ function getTitle(pathname: string) {
 
 export default function AdminLayout() {
   const { pathname } = useLocation()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  useEffect(() => {
+    setSidebarOpen(false)
+  }, [pathname])
 
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar />
-      <div className="pl-64">
-        <TopBar title={getTitle(pathname)} />
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <div className="lg:pl-64">
+        <TopBar title={getTitle(pathname)} onMenuClick={() => setSidebarOpen(true)} />
         <main>
           <Outlet />
         </main>

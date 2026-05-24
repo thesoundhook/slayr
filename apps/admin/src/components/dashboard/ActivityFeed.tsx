@@ -35,7 +35,7 @@ export default function ActivityFeed({ orders }: Props) {
   }
 
   return (
-    <ul className="divide-y divide-border -mx-6">
+    <ul className="divide-y divide-border">
       {orders.map(order => {
         const cfg = statusConfig[order.status] ?? statusConfig.pending
         const Icon = cfg.icon

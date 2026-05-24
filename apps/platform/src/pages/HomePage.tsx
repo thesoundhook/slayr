@@ -50,16 +50,15 @@ export function HomePage() {
             transition={{ delay: 0.2, duration: 0.8 }}
           >
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-display font-bold text-white leading-tight tracking-tight">
-              Every moment
+              Producing culture
               <br />
               <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                deserves magic
+                defining events
               </span>
             </h1>
 
             <p className="text-lg md:text-xl text-white/70 max-w-2xl mx-auto leading-relaxed">
-              Discover events that transform ordinary days into extraordinary memories.
-              Simple access to the moments that matter most.
+              creating the space where the best creative talent does their best work
             </p>
           </motion.div>
 

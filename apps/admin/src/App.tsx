@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import type { Session } from '@supabase/supabase-js'
 import { AdminProvider, useAdmin } from '@/context/AdminContext'
+import type { Permission } from '@/lib/permissions'
 import LoginPage from '@/pages/LoginPage'
 import DashboardPage from '@/pages/DashboardPage'
 import EventsPage from '@/pages/EventsPage'
@@ -14,6 +15,7 @@ import AdminLayout from '@/components/layout/AdminLayout'
 import BriefsPage from '@/pages/BriefsPage'
 import BriefFormPage from '@/pages/BriefFormPage'
 import TeamPage from '@/pages/TeamPage'
+import AcceptInvitePage from '@/pages/AcceptInvitePage'
 import ScanPage from '@/pages/ScanPage'
 import VenuesPage from '@/pages/VenuesPage'
 import VenueFormPage from '@/pages/VenueFormPage'
@@ -25,39 +27,74 @@ function ProtectedRoute({ session, children }: { session: Session | null; childr
   return <>{children}</>
 }
 
-// Redirects events_viewer away from super_admin-only routes
-function SuperAdminRoute({ children }: { children: React.ReactNode }) {
-  const { role, roleLoading } = useAdmin()
+function RequirePermission({ perm, children }: { perm: Permission; children: React.ReactNode }) {
+  const { roleLoading, hasPermission } = useAdmin()
   if (roleLoading) return null
-  if (role !== 'super_admin') return <Navigate to="/events" replace />
+  if (!hasPermission(perm)) {
+    return (
+      <div className="flex items-center justify-center h-full min-h-[40vh]">
+        <p className="text-sm text-muted-foreground">You don't have access to this page.</p>
+      </div>
+    )
+  }
   return <>{children}</>
+}
+
+const LANDING_PRIORITY: { perm: Permission; path: string }[] = [
+  { perm: 'dashboard',         path: '/' },
+  { perm: 'events.view',       path: '/events' },
+  { perm: 'orders.view',       path: '/orders' },
+  { perm: 'scan',              path: '/scan' },
+  { perm: 'attendees.view',    path: '/events' },
+  { perm: 'briefs.view',       path: '/briefs' },
+  { perm: 'venues.view',       path: '/venues' },
+  { perm: 'organizers.view',   path: '/organizers' },
+  { perm: 'team.manage',       path: '/team' },
+]
+
+function LandingRedirect() {
+  const { roleLoading, hasPermission } = useAdmin()
+  if (roleLoading) return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    </div>
+  )
+  const first = LANDING_PRIORITY.find(({ perm }) => hasPermission(perm))
+  if (!first) return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <p className="text-sm text-muted-foreground">You don't have access to any pages. Contact your administrator.</p>
+    </div>
+  )
+  return <Navigate to={first.path} replace />
 }
 
 function AppRoutes({ session }: { session: Session | null }) {
   return (
     <Routes>
-      <Route path="/login" element={session ? <Navigate to="/" replace /> : <LoginPage />} />
+      <Route path="/login" element={session ? <Navigate to="/start" replace /> : <LoginPage />} />
+      <Route path="/start" element={<ProtectedRoute session={session}><LandingRedirect /></ProtectedRoute>} />
+      <Route path="/accept-invite" element={<AcceptInvitePage />} />
       <Route path="/" element={
         <ProtectedRoute session={session}>
           <AdminLayout />
         </ProtectedRoute>
       }>
-        <Route index element={<SuperAdminRoute><DashboardPage /></SuperAdminRoute>} />
-        <Route path="events" element={<EventsPage />} />
-        <Route path="events/new" element={<EventFormPage />} />
-        <Route path="events/:id/edit" element={<EventFormPage />} />
-        <Route path="events/:id/attendees" element={<AttendeesPage />} />
-        <Route path="scan" element={<ScanPage />} />
-        <Route path="orders" element={<SuperAdminRoute><OrdersPage /></SuperAdminRoute>} />
-        <Route path="orders/:id" element={<SuperAdminRoute><OrderDetailPage /></SuperAdminRoute>} />
-        <Route path="briefs" element={<SuperAdminRoute><BriefsPage /></SuperAdminRoute>} />
-        <Route path="team" element={<SuperAdminRoute><TeamPage /></SuperAdminRoute>} />
-        <Route path="venues" element={<SuperAdminRoute><VenuesPage /></SuperAdminRoute>} />
-        <Route path="venues/new" element={<SuperAdminRoute><VenueFormPage /></SuperAdminRoute>} />
-        <Route path="venues/:id/edit" element={<SuperAdminRoute><VenueFormPage /></SuperAdminRoute>} />
-        <Route path="organizers" element={<SuperAdminRoute><OrganizersPage /></SuperAdminRoute>} />
-        <Route path="organizers/new" element={<SuperAdminRoute><OrganizerFormPage /></SuperAdminRoute>} />
-        <Route path="organizers/:id/edit" element={<SuperAdminRoute><OrganizerFormPage /></SuperAdminRoute>} />
+        <Route index element={<RequirePermission perm="dashboard"><DashboardPage /></RequirePermission>} />
+        <Route path="events" element={<RequirePermission perm="events.view"><EventsPage /></RequirePermission>} />
+        <Route path="events/new" element={<RequirePermission perm="events.create"><EventFormPage /></RequirePermission>} />
+        <Route path="events/:id/edit" element={<RequirePermission perm="events.edit"><EventFormPage /></RequirePermission>} />
+        <Route path="events/:id/attendees" element={<RequirePermission perm="attendees.view"><AttendeesPage /></RequirePermission>} />
+        <Route path="scan" element={<RequirePermission perm="scan"><ScanPage /></RequirePermission>} />
+        <Route path="orders" element={<RequirePermission perm="orders.view"><OrdersPage /></RequirePermission>} />
+        <Route path="orders/:id" element={<RequirePermission perm="orders.view"><OrderDetailPage /></RequirePermission>} />
+        <Route path="briefs" element={<RequirePermission perm="briefs.view"><BriefsPage /></RequirePermission>} />
+        <Route path="team" element={<RequirePermission perm="team.manage"><TeamPage /></RequirePermission>} />
+        <Route path="venues" element={<RequirePermission perm="venues.view"><VenuesPage /></RequirePermission>} />
+        <Route path="venues/new" element={<RequirePermission perm="venues.manage"><VenueFormPage /></RequirePermission>} />
+        <Route path="venues/:id/edit" element={<RequirePermission perm="venues.manage"><VenueFormPage /></RequirePermission>} />
+        <Route path="organizers" element={<RequirePermission perm="organizers.view"><OrganizersPage /></RequirePermission>} />
+        <Route path="organizers/new" element={<RequirePermission perm="organizers.manage"><OrganizerFormPage /></RequirePermission>} />
+        <Route path="organizers/:id/edit" element={<RequirePermission perm="organizers.manage"><OrganizerFormPage /></RequirePermission>} />
       </Route>
       <Route path="/briefs/new" element={
         <ProtectedRoute session={session}><BriefFormPage /></ProtectedRoute>

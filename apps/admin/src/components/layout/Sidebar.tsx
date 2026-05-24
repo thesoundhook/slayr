@@ -2,43 +2,43 @@ import { NavLink } from 'react-router-dom'
 import { LayoutDashboard, Calendar, ShoppingBag, FileText, Users, MapPin, UserCircle, ScanLine, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAdmin } from '@/context/AdminContext'
+import type { Permission } from '@/lib/permissions'
 
-const superAdminGroups = [
+interface NavItem {
+  to: string
+  label: string
+  icon: React.ElementType
+  end: boolean
+  permission: Permission
+}
+
+const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: 'Analytics',
     items: [
-      { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
+      { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true, permission: 'dashboard' },
     ],
   },
   {
     label: 'Catalogue',
     items: [
-      { to: '/events', label: 'Events', icon: Calendar, end: false },
-      { to: '/venues', label: 'Venues', icon: MapPin, end: false },
-      { to: '/organizers', label: 'Organizers', icon: UserCircle, end: false },
-      { to: '/orders', label: 'Orders', icon: ShoppingBag, end: false },
-      { to: '/scan', label: 'Scan Tickets', icon: ScanLine, end: false },
+      { to: '/events',      label: 'Events',       icon: Calendar,     end: false, permission: 'events.view' },
+      { to: '/venues',      label: 'Venues',       icon: MapPin,       end: false, permission: 'venues.view' },
+      { to: '/organizers',  label: 'Organizers',   icon: UserCircle,   end: false, permission: 'organizers.view' },
+      { to: '/orders',      label: 'Orders',       icon: ShoppingBag,  end: false, permission: 'orders.view' },
+      { to: '/scan',        label: 'Scan Tickets', icon: ScanLine,     end: false, permission: 'scan' },
     ],
   },
   {
     label: 'Client Work',
     items: [
-      { to: '/briefs', label: 'Briefs', icon: FileText, end: false },
+      { to: '/briefs', label: 'Briefs', icon: FileText, end: false, permission: 'briefs.view' },
     ],
   },
   {
     label: 'Settings',
     items: [
-      { to: '/team', label: 'Team', icon: Users, end: false },
-    ],
-  },
-]
-
-const eventsViewerGroups = [
-  {
-    label: 'Catalogue',
-    items: [
-      { to: '/events', label: 'Events', icon: Calendar, end: false },
+      { to: '/team', label: 'Team', icon: Users, end: false, permission: 'team.manage' },
     ],
   },
 ]
@@ -49,8 +49,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ open, onClose }: SidebarProps) {
-  const { role } = useAdmin()
-  const navGroups = role === 'super_admin' ? superAdminGroups : eventsViewerGroups
+  const { hasPermission } = useAdmin()
 
   return (
     <>
@@ -88,32 +87,36 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         </div>
 
         <nav className="flex-1 py-4 overflow-y-auto">
-          {navGroups.map(({ label, items }) => (
-            <div key={label} className="mb-4">
-              <p className="px-5 mb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                {label}
-              </p>
-              {items.map(({ to, label: itemLabel, icon: Icon, end }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  end={end}
-                  onClick={onClose}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex items-center gap-3 px-5 py-2.5 text-sm border-l-2 transition-colors',
-                      isActive
-                        ? 'border-primary bg-accent text-primary font-medium'
-                        : 'border-transparent text-muted-foreground hover:bg-secondary hover:text-foreground'
-                    )
-                  }
-                >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  {itemLabel}
-                </NavLink>
-              ))}
-            </div>
-          ))}
+          {NAV_GROUPS.map(({ label, items }) => {
+            const visibleItems = items.filter(item => hasPermission(item.permission))
+            if (visibleItems.length === 0) return null
+            return (
+              <div key={label} className="mb-4">
+                <p className="px-5 mb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  {label}
+                </p>
+                {visibleItems.map(({ to, label: itemLabel, icon: Icon, end }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    end={end}
+                    onClick={onClose}
+                    className={({ isActive }) =>
+                      cn(
+                        'flex items-center gap-3 px-5 py-2.5 text-sm border-l-2 transition-colors',
+                        isActive
+                          ? 'border-primary bg-accent text-primary font-medium'
+                          : 'border-transparent text-muted-foreground hover:bg-secondary hover:text-foreground'
+                      )
+                    }
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {itemLabel}
+                  </NavLink>
+                ))}
+              </div>
+            )
+          })}
         </nav>
       </aside>
     </>

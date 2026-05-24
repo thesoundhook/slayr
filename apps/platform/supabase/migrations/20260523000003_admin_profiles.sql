@@ -50,6 +50,7 @@ create policy "Super admins can delete profiles"
   using (get_my_admin_role() = 'super_admin');
 
 grant select, insert, update, delete on admin_profiles to authenticated;
+grant select, insert, update, delete on admin_profiles to service_role;
 
 -- ============================================================
 -- Bootstrap: insert your own user as the first super_admin.

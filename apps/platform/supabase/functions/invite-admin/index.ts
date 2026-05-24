@@ -46,27 +46,52 @@ Deno.serve(async (req) => {
       })
     }
 
-    const { email, role } = await req.json() as { email: string; role: string }
+    const { email, role, password, redirectTo, permissions } = await req.json() as {
+      email: string
+      role: string
+      password?: string
+      redirectTo?: string
+      permissions?: string[]
+    }
 
-    if (!email || !['super_admin', 'events_viewer'].includes(role)) {
+    if (!email || !['super_admin', 'admin', 'event_manager', 'events_viewer', 'scanner'].includes(role)) {
       return new Response(JSON.stringify({ error: 'Invalid email or role' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    // Send Supabase invite email
-    const { data: invited, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email)
-    if (inviteError) {
-      return new Response(JSON.stringify({ error: inviteError.message }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    let newUserId: string
+
+    if (password) {
+      // Create account directly with email + password
+      const { data: created, error: createError } = await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
       })
+      if (createError) {
+        return new Response(JSON.stringify({ error: createError.message }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      newUserId = created.user.id
+    } else {
+      // Send invite email
+      const { data: invited, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, { redirectTo })
+      if (inviteError) {
+        return new Response(JSON.stringify({ error: inviteError.message }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      newUserId = invited.user.id
     }
 
-    // Create the admin_profiles row so their role is ready when they first log in
+    // Create the admin_profiles row
     const { error: profileError } = await supabase.from('admin_profiles').insert({
-      user_id: invited.user.id,
+      user_id: newUserId,
       role,
       name: email.split('@')[0],
+      permissions: permissions ?? [],
     })
     if (profileError) {
       return new Response(JSON.stringify({ error: profileError.message }), {

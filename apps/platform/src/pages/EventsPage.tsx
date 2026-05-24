@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Search, Calendar, MapPin, Users } from 'lucide-react'
+import { Search, Calendar, MapPin } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Card, CardHeader } from '../components/ui/Card'
@@ -187,10 +187,10 @@ export function EventsPage() {
                             <span className="truncate">{event.venue.name}, {event.venue.city}</span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center text-muted-foreground text-sm">
+                            {/* <div className="flex items-center text-muted-foreground text-sm">
                               <Users className="w-4 h-4 mr-2" />
                               <span>{event.soldTickets.toLocaleString()} attending</span>
-                            </div>
+                            </div> */}
                             <div className="text-right">
                               <div className="text-lg font-semibold">
                                 {formatPrice(Math.min(...event.ticketTypes.map(t => t.price)))}
@@ -200,7 +200,7 @@ export function EventsPage() {
                           </div>
 
                           {/* Availability indicator */}
-                          <div className="w-full bg-border rounded-full h-1.5 overflow-hidden">
+                          <div className="mt-3 w-full bg-border rounded-full h-1.5 overflow-hidden">
                             <div
                               className="h-full bg-primary rounded-full transition-all duration-300"
                               style={{

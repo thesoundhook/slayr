@@ -11,9 +11,10 @@ import {
 } from '@/services/eventService'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { NumericInput } from '@/components/ui/NumericInput'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import ImageUpload from '@/components/ui/ImageUpload'
-import { ArrowLeft, Plus, Trash2, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, ChevronDown, ChevronUp, ExternalLink, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import PageHero from '@/components/ui/PageHero'
 
@@ -81,7 +82,7 @@ export default function EventFormPage() {
     status: 'upcoming',
   })
 
-  const [tagsStr, setTagsStr] = useState('')
+  const [tagInput, setTagInput] = useState('')
   const [tickets, setTickets] = useState<TicketTypeFormData[]>([emptyTicket()])
 
   // Auto-sum total_capacity from ticket quantities
@@ -91,7 +92,7 @@ export default function EventFormPage() {
     const newVenueId = searchParams.get('newVenueId')
     const newOrganizerId = searchParams.get('newOrganizerId')
     const rawDraft = sessionStorage.getItem(DRAFT_KEY)
-    const draft = rawDraft ? JSON.parse(rawDraft) as { form: EventFormData; tickets: TicketTypeFormData[]; tagsStr: string } : null
+    const draft = rawDraft ? JSON.parse(rawDraft) as { form: EventFormData; tickets: TicketTypeFormData[] } : null
 
     async function load() {
       const [v, o] = await Promise.all([getVenues(), getOrganizers()])
@@ -107,7 +108,6 @@ export default function EventFormPage() {
           ...(newOrganizerId ? { organizer_id: newOrganizerId } : {}),
         })
         setTickets(draft.tickets)
-        setTagsStr(draft.tagsStr)
       } else if (isEdit && id) {
         const event = await getEventById(id)
         setForm({
@@ -124,7 +124,6 @@ export default function EventFormPage() {
           featured: event.featured,
           status: event.status,
         })
-        setTagsStr(event.tags.join(', '))
         if (event.ticket_types && event.ticket_types.length > 0) {
           setTickets(event.ticket_types.map(tt => ({
             id: tt.id,
@@ -159,7 +158,7 @@ export default function EventFormPage() {
       const eventData: EventFormData = {
         ...form,
         total_capacity: autoCapacity,
-        tags: tagsStr.split(',').map(s => s.trim()).filter(Boolean),
+        tags: form.tags,
       }
       if (isEdit && id) {
         await updateEvent(id, eventData, tickets)
@@ -199,7 +198,7 @@ export default function EventFormPage() {
   }
 
   const saveDraftAndNavigate = (destination: string) => {
-    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ form, tickets, tagsStr }))
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ form, tickets }))
     navigate(destination)
   }
 
@@ -225,7 +224,7 @@ export default function EventFormPage() {
           </Button>
         }
       />
-      <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-6 max-w-3xl">
+      <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-6 max-w-3xl mx-auto">
 
       {/* Basic info */}
       <Card>
@@ -332,11 +331,45 @@ export default function EventFormPage() {
           </div>
 
           <Field label="Tags">
-            <Input
-              value={tagsStr}
-              onChange={e => setTagsStr(e.target.value)}
-              placeholder="afrobeats, party, live music  (comma-separated)"
-            />
+            <div
+              className="flex flex-wrap gap-1.5 min-h-10 w-full rounded-md border border-input bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-ring cursor-text"
+              onClick={e => (e.currentTarget.querySelector('input') as HTMLInputElement | null)?.focus()}
+            >
+              {form.tags.map((tag, i) => (
+                <span key={i} className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium">
+                  {tag}
+                  <button type="button" onClick={() => setForm(f => ({ ...f, tags: f.tags.filter((_, j) => j !== i) }))} className="hover:text-destructive">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+              <input
+                value={tagInput}
+                onChange={e => {
+                  const val = e.target.value
+                  if (val.includes(',')) {
+                    const parts = val.split(',')
+                    const newTags = parts.slice(0, -1).map(p => p.trim()).filter(Boolean)
+                    setForm(f => ({ ...f, tags: [...f.tags, ...newTags.filter(t => !f.tags.includes(t))] }))
+                    setTagInput(parts[parts.length - 1].trimStart())
+                  } else {
+                    setTagInput(val)
+                  }
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    const t = tagInput.trim()
+                    if (t && !form.tags.includes(t)) setForm(f => ({ ...f, tags: [...f.tags, t] }))
+                    setTagInput('')
+                  } else if (e.key === 'Backspace' && tagInput === '' && form.tags.length > 0) {
+                    setForm(f => ({ ...f, tags: f.tags.slice(0, -1) }))
+                  }
+                }}
+                placeholder={form.tags.length === 0 ? 'afrobeats, party…  (comma or Enter to add)' : ''}
+                className="flex-1 min-w-28 bg-transparent text-sm focus:outline-none"
+              />
+            </div>
           </Field>
 
           <div className="flex items-center gap-3 pt-1">
@@ -448,31 +481,28 @@ export default function EventFormPage() {
                       <Field label="Price (₦)" error={field(`ticket_price_${idx}`)}>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₦</span>
-                          <Input
-                            type="number"
+                          <NumericInput
                             min={0}
-                            value={ticket.price > 0 ? ticket.price / 100 : ''}
-                            onChange={e => updateTicket(idx, 'price', Math.round((parseFloat(e.target.value) || 0) * 100))}
+                            value={Math.round(ticket.price / 100)}
+                            onChange={v => updateTicket(idx, 'price', v * 100)}
                             placeholder="0"
                             className={cn('pl-7', field(`ticket_price_${idx}`) && 'border-destructive')}
                           />
                         </div>
                       </Field>
                       <Field label="Quantity" error={field(`ticket_qty_${idx}`)}>
-                        <Input
-                          type="number"
+                        <NumericInput
                           min={1}
-                          value={ticket.quantity || ''}
-                          onChange={e => updateTicket(idx, 'quantity', parseInt(e.target.value) || 0)}
+                          value={ticket.quantity}
+                          onChange={v => updateTicket(idx, 'quantity', v || 1)}
                           className={cn(field(`ticket_qty_${idx}`) && 'border-destructive')}
                         />
                       </Field>
                       <Field label="Max per Order">
-                        <Input
-                          type="number"
+                        <NumericInput
                           min={1}
-                          value={ticket.max_per_order || ''}
-                          onChange={e => updateTicket(idx, 'max_per_order', parseInt(e.target.value) || 1)}
+                          value={ticket.max_per_order}
+                          onChange={v => updateTicket(idx, 'max_per_order', v || 1)}
                         />
                       </Field>
                     </div>
@@ -489,11 +519,10 @@ export default function EventFormPage() {
                       <Field label="Original price (₦) — shown as strikethrough">
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₦</span>
-                          <Input
-                            type="number"
+                          <NumericInput
                             min={0}
-                            value={ticket.original_price ? ticket.original_price / 100 : ''}
-                            onChange={e => updateTicket(idx, 'original_price', e.target.value ? Math.round(parseFloat(e.target.value) * 100) : null)}
+                            value={ticket.original_price ? Math.round(ticket.original_price / 100) : 0}
+                            onChange={v => updateTicket(idx, 'original_price', v > 0 ? v * 100 : null)}
                             placeholder="0"
                             className="pl-7"
                           />

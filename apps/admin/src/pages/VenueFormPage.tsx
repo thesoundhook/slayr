@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { getVenues, createVenue, updateVenue, type VenueFormData } from '@/services/eventService'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { NumericInput } from '@/components/ui/NumericInput'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { ArrowLeft } from 'lucide-react'
 import PageHero from '@/components/ui/PageHero'
@@ -111,7 +112,7 @@ export default function VenueFormPage() {
           </Button>
         }
       />
-      <div className="p-4 sm:p-6 max-w-2xl">
+      <div className="p-4 sm:p-6 max-w-2xl mx-auto">
         <form onSubmit={handleSubmit} className="space-y-6">
           {submitError && (
             <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -157,12 +158,11 @@ export default function VenueFormPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Capacity</label>
-                  <Input
-                    type="number"
+                  <NumericInput
                     min={1}
-                    value={form.capacity || ''}
-                    onChange={e => set('capacity', parseInt(e.target.value) || 0)}
-                    placeholder="5000"
+                    value={form.capacity}
+                    onChange={v => set('capacity', v)}
+                    placeholder="5,000"
                   />
                   {fieldErrors.capacity && <p className="text-destructive text-xs mt-1">{fieldErrors.capacity}</p>}
                 </div>

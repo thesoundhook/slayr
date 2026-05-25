@@ -27,6 +27,7 @@ export async function getEventById(idOrSlug: string) {
 
 export interface EventFormData {
   title: string
+  slug?: string
   description: string
   category: string
   date: string
@@ -167,6 +168,7 @@ export async function getVenues() {
 
 export interface VenueFormData {
   name: string
+  slug?: string
   address: string
   city: string
   state: string
@@ -207,6 +209,7 @@ export async function getOrganizers() {
 
 export interface OrganizerFormData {
   name: string
+  slug?: string
   logo_url: string | null
   description: string | null
   verified: boolean

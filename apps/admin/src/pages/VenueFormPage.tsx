@@ -10,6 +10,7 @@ import PageHero from '@/components/ui/PageHero'
 
 const empty: VenueFormData = {
   name: '',
+  slug: '',
   address: '',
   city: '',
   state: '',
@@ -52,6 +53,7 @@ export default function VenueFormPage() {
       if (venue) {
         setForm({
           name: venue.name,
+          slug: venue.slug,
           address: venue.address,
           city: venue.city,
           state: venue.state,
@@ -133,6 +135,14 @@ export default function VenueFormPage() {
                 <Input value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Eko Convention Centre" />
                 {fieldErrors.name && <p className="text-destructive text-xs mt-1">{fieldErrors.name}</p>}
               </div>
+
+              {isEdit && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">URL slug</label>
+                  <Input value={form.slug ?? ''} onChange={e => set('slug', e.target.value)} placeholder="auto-generated from name" />
+                  <p className="text-xs text-muted-foreground mt-1">Leave blank to regenerate. Old UUID links keep working.</p>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium mb-1">Address</label>

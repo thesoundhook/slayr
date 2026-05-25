@@ -70,6 +70,7 @@ export default function EventFormPage() {
 
   const [form, setForm] = useState<EventFormData>({
     title: '',
+    slug: '',
     description: '',
     category: 'music',
     date: '',
@@ -114,6 +115,7 @@ export default function EventFormPage() {
         setCanonicalId(event.id)
         setForm({
           title: event.title,
+          slug: event.slug,
           description: event.description,
           category: event.category,
           date: event.date,
@@ -241,6 +243,19 @@ export default function EventFormPage() {
               className={cn(field('title') && 'border-destructive')}
             />
           </Field>
+
+          {isEdit && (
+            <Field label="URL slug">
+              <Input
+                value={form.slug ?? ''}
+                onChange={e => setForm(f => ({ ...f, slug: e.target.value }))}
+                placeholder="auto-generated from title"
+              />
+              <p className="text-xs text-muted-foreground">
+                Used in the public URL: /events/{form.slug || '…'}. Leave blank to regenerate. Old UUID links keep working.
+              </p>
+            </Field>
+          )}
 
           <Field label="Description" error={field('description')}>
             <textarea

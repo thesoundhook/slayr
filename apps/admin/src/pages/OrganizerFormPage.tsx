@@ -10,6 +10,7 @@ import LogoUpload from '@/components/ui/LogoUpload'
 
 const empty: OrganizerFormData = {
   name: '',
+  slug: '',
   logo_url: null,
   description: null,
   verified: false,
@@ -44,6 +45,7 @@ export default function OrganizerFormPage() {
       if (org) {
         setForm({
           name: org.name,
+          slug: org.slug,
           logo_url: org.logo_url,
           description: org.description,
           verified: org.verified,
@@ -122,6 +124,14 @@ export default function OrganizerFormPage() {
                 <Input value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Flytime Promotions" />
                 {fieldErrors.name && <p className="text-destructive text-xs mt-1">{fieldErrors.name}</p>}
               </div>
+
+              {isEdit && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">URL slug</label>
+                  <Input value={form.slug ?? ''} onChange={e => set('slug', e.target.value)} placeholder="auto-generated from name" />
+                  <p className="text-xs text-muted-foreground mt-1">Leave blank to regenerate. Old UUID links keep working.</p>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium mb-2">Logo</label>

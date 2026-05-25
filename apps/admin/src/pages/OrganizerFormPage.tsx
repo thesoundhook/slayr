@@ -40,7 +40,7 @@ export default function OrganizerFormPage() {
   useEffect(() => {
     if (!isEdit) return
     getOrganizers().then(organizers => {
-      const org = organizers.find(o => o.id === id)
+      const org = organizers.find(o => o.id === id || o.slug === id)
       if (org) {
         setForm({
           name: org.name,
@@ -66,7 +66,10 @@ export default function OrganizerFormPage() {
     setSubmitError(null)
     try {
       if (isEdit) {
-        await updateOrganizer(id!, form)
+        const organizers = await getOrganizers()
+        const canonical = organizers.find(o => o.id === id || o.slug === id)
+        if (!canonical) throw new Error('Organizer not found')
+        await updateOrganizer(canonical.id, form)
         navigate(returnTo ?? '/organizers')
       } else {
         const org = await createOrganizer(form)

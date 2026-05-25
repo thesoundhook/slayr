@@ -88,7 +88,7 @@ export default function BriefsPage() {
               </TableHeader>
               <TableBody>
                 {briefs.map(brief => (
-                  <TableRow key={brief.id} className="cursor-pointer" onClick={() => navigate(`/briefs/${brief.id}`)}>
+                  <TableRow key={brief.id} className="cursor-pointer" onClick={() => navigate(`/briefs/${brief.slug}`)}>
                     <TableCell className="font-medium">{brief.title || 'Untitled Brief'}</TableCell>
                     <TableCell>
                       <Badge variant={brief.status === 'complete' ? 'success' : 'warning'} className="capitalize">
@@ -106,7 +106,7 @@ export default function BriefsPage() {
                     <TableCell className="text-muted-foreground text-sm">{formatRelative(brief.updated_at)}</TableCell>
                     <TableCell className="text-right" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => navigate(`/briefs/${brief.id}`)} title="Open brief">
+                        <Button variant="ghost" size="icon" onClick={() => navigate(`/briefs/${brief.slug}`)} title="Open brief">
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleDelete(brief.id, brief.title)} title="Delete" className="text-destructive hover:text-destructive">

@@ -1,5 +1,6 @@
 export interface DbVenue {
   id: string
+  slug: string
   name: string
   address: string
   city: string
@@ -12,6 +13,7 @@ export interface DbVenue {
 
 export interface DbOrganizer {
   id: string
+  slug: string
   name: string
   logo_url: string | null
   description: string | null
@@ -38,6 +40,7 @@ export interface DbTicketType {
 
 export interface DbEvent {
   id: string
+  slug: string
   title: string
   description: string
   category: string
@@ -99,6 +102,7 @@ export interface DbTicket {
 
 export interface DbBrief {
   id: string
+  slug: string
   created_at: string
   updated_at: string
   title: string

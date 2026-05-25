@@ -142,7 +142,7 @@ export function EventsPage() {
                   whileHover={{ y: -8, scale: 1.02 }}
                   className="group"
                 >
-                  <Link to={`/events/${event.id}`}>
+                  <Link to={`/events/${event.slug ?? event.id}`}>
                     <Card className="overflow-hidden border-0 bg-card/50 backdrop-blur-md hover:bg-card/70 transition-all duration-300 glow-border">
                       <div className="relative aspect-video overflow-hidden">
                         <img

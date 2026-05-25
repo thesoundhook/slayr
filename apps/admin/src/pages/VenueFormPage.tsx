@@ -48,7 +48,7 @@ export default function VenueFormPage() {
   useEffect(() => {
     if (!isEdit) return
     getVenues().then(venues => {
-      const venue = venues.find(v => v.id === id)
+      const venue = venues.find(v => v.id === id || v.slug === id)
       if (venue) {
         setForm({
           name: venue.name,
@@ -77,7 +77,10 @@ export default function VenueFormPage() {
     setSubmitError(null)
     try {
       if (isEdit) {
-        await updateVenue(id!, form)
+        const venues = await getVenues()
+        const canonical = venues.find(v => v.id === id || v.slug === id)
+        if (!canonical) throw new Error('Venue not found')
+        await updateVenue(canonical.id, form)
         navigate(returnTo ?? '/venues')
       } else {
         const venue = await createVenue(form)

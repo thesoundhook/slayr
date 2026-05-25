@@ -23,8 +23,12 @@ export default function AttendeesPage() {
 
   useEffect(() => {
     if (!id) return
-    Promise.all([getEventById(id), getTicketsByEvent(id)])
-      .then(([e, a]) => { setEvent(e); setAttendees(a as Attendee[]) })
+    getEventById(id)
+      .then(e => {
+        setEvent(e)
+        return getTicketsByEvent(e.id)
+      })
+      .then(a => setAttendees(a as Attendee[]))
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [id])

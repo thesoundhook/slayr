@@ -66,6 +66,7 @@ export default function EventFormPage() {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [collapsedTickets, setCollapsedTickets] = useState<Set<number>>(new Set())
+  const [canonicalId, setCanonicalId] = useState<string | null>(null)
 
   const [form, setForm] = useState<EventFormData>({
     title: '',
@@ -110,6 +111,7 @@ export default function EventFormPage() {
         setTickets(draft.tickets)
       } else if (isEdit && id) {
         const event = await getEventById(id)
+        setCanonicalId(event.id)
         setForm({
           title: event.title,
           description: event.description,
@@ -160,8 +162,8 @@ export default function EventFormPage() {
         total_capacity: autoCapacity,
         tags: form.tags,
       }
-      if (isEdit && id) {
-        await updateEvent(id, eventData, tickets)
+      if (isEdit && canonicalId) {
+        await updateEvent(canonicalId, eventData, tickets)
       } else {
         await createEvent(eventData, tickets)
       }

@@ -106,7 +106,7 @@ export default function VenuesPage() {
                   <TableCell className="text-muted-foreground">{venue.capacity.toLocaleString()}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => navigate(`/venues/${venue.id}/edit`)} title="Edit">
+                      <Button variant="ghost" size="icon" onClick={() => navigate(`/venues/${venue.slug}/edit`)} title="Edit">
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => handleDelete(venue.id, venue.name)} title="Delete" className="text-destructive hover:text-destructive">

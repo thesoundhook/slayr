@@ -19,6 +19,7 @@ export interface KpiStatsWithPrev {
 
 export interface TopEvent {
   event_id: string
+  event_slug: string
   title: string
   revenue: number
   tickets: number
@@ -213,7 +214,7 @@ export async function getTopEvents(days: number, limit = 5): Promise<TopEvent[]>
   const { from } = rangeFor(days)
   const { data, error } = await supabase
     .from('order_items')
-    .select('event_id, quantity, total_price, events(title), orders!inner(status, created_at)')
+    .select('event_id, quantity, total_price, events(title, slug), orders!inner(status, created_at)')
     .eq('orders.status', 'confirmed')
     .gte('orders.created_at', from.toISOString())
   if (error) throw error
@@ -223,12 +224,13 @@ export async function getTopEvents(days: number, limit = 5): Promise<TopEvent[]>
     event_id: string
     quantity: number
     total_price: number
-    events: { title: string } | null
+    events: { title: string; slug: string } | null
   }>) {
     const id = row.event_id
     if (!byEvent[id]) {
       byEvent[id] = {
         event_id: id,
+        event_slug: row.events?.slug ?? id,
         title: row.events?.title ?? 'Untitled',
         revenue: 0,
         tickets: 0,

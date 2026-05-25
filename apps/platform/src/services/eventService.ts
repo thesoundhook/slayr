@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { idColumn } from '../lib/slug'
 import { Event, EventCategory, EventFilters } from '../types/event'
 import { DbEvent } from '../types/database'
 
@@ -12,6 +13,7 @@ const EVENT_QUERY = `
 function mapDbEvent(row: DbEvent): Event {
   return {
     id: row.id,
+    slug: row.slug,
     title: row.title,
     description: row.description,
     category: row.category as EventCategory,
@@ -19,6 +21,7 @@ function mapDbEvent(row: DbEvent): Event {
     time: row.time,
     venue: {
       id: row.venues!.id,
+      slug: row.venues!.slug,
       name: row.venues!.name,
       address: row.venues!.address,
       city: row.venues!.city,
@@ -29,6 +32,7 @@ function mapDbEvent(row: DbEvent): Event {
     },
     organizer: {
       id: row.organizers!.id,
+      slug: row.organizers!.slug,
       name: row.organizers!.name,
       logo: row.organizers!.logo_url ?? undefined,
       description: row.organizers!.description ?? undefined,
@@ -81,11 +85,11 @@ export async function getEvents(filters?: EventFilters): Promise<Event[]> {
   return (data as DbEvent[]).map(mapDbEvent)
 }
 
-export async function getEventById(id: string): Promise<Event | null> {
+export async function getEventById(idOrSlug: string): Promise<Event | null> {
   const { data, error } = await supabase
     .from('events')
     .select(EVENT_QUERY)
-    .eq('id', id)
+    .eq(idColumn(idOrSlug), idOrSlug)
     .single()
 
   if (error) {

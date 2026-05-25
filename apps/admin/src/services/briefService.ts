@@ -1,23 +1,24 @@
 import { supabase } from '@/lib/supabase'
+import { idColumn } from '@/lib/slug'
 import type { DbBrief } from '@/types/database'
 import type { BriefData } from '@/types/brief'
 
-export type BriefSummary = Pick<DbBrief, 'id' | 'title' | 'status' | 'current_gate' | 'created_at' | 'updated_at'>
+export type BriefSummary = Pick<DbBrief, 'id' | 'slug' | 'title' | 'status' | 'current_gate' | 'created_at' | 'updated_at'>
 
 export async function getBriefs(): Promise<BriefSummary[]> {
   const { data, error } = await supabase
     .from('event_briefs')
-    .select('id, title, status, current_gate, created_at, updated_at')
+    .select('id, slug, title, status, current_gate, created_at, updated_at')
     .order('updated_at', { ascending: false })
   if (error) throw error
   return data ?? []
 }
 
-export async function getBriefById(id: string): Promise<DbBrief> {
+export async function getBriefById(idOrSlug: string): Promise<DbBrief> {
   const { data, error } = await supabase
     .from('event_briefs')
     .select('*')
-    .eq('id', id)
+    .eq(idColumn(idOrSlug), idOrSlug)
     .single()
   if (error) throw error
   return data

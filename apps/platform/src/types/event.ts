@@ -1,5 +1,6 @@
 export interface Event {
   id: string;
+  slug: string;
   title: string;
   description: string;
   category: EventCategory;
@@ -20,6 +21,7 @@ export interface Event {
 
 export interface Venue {
   id: string;
+  slug: string;
   name: string;
   address: string;
   city: string;
@@ -46,6 +48,7 @@ export interface Section {
 
 export interface Organizer {
   id: string;
+  slug: string;
   name: string;
   logo?: string;
   description?: string;

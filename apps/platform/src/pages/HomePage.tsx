@@ -181,7 +181,7 @@ export function HomePage() {
                   transition={{ delay: index * 0.05, duration: 0.5 }}
                   className="group"
                 >
-                  <Link to={`/events/${event.id}`} className="block">
+                  <Link to={`/events/${event.slug ?? event.id}`} className="block">
                     <Card className="overflow-hidden border-0 bg-card/30 backdrop-blur-sm hover:bg-card/50 transition-all duration-300 group-hover:shadow-md ring-1 ring-primary/20">
                       <div className="relative aspect-[16/10] overflow-hidden">
                         <img
@@ -257,7 +257,7 @@ export function HomePage() {
                   transition={{ delay: index * 0.05, duration: 0.5 }}
                   className="group"
                 >
-                  <Link to={`/events/${event.id}`} className="block">
+                  <Link to={`/events/${event.slug ?? event.id}`} className="block">
                     <Card className="overflow-hidden border-0 bg-card/30 backdrop-blur-sm hover:bg-card/50 transition-all duration-300 group-hover:shadow-md">
                       <div className="relative aspect-[16/10] overflow-hidden">
                         <img

@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { idColumn } from '@/lib/slug'
 import type { DbEvent, DbTicketType, DbVenue, DbOrganizer } from '@/types/database'
 
 export async function getEvents() {
@@ -10,11 +11,11 @@ export async function getEvents() {
   return data as DbEvent[]
 }
 
-export async function getEventById(id: string) {
+export async function getEventById(idOrSlug: string) {
   const { data, error } = await supabase
     .from('events')
     .select('*, venues(*), organizers(*), ticket_types(*)')
-    .eq('id', id)
+    .eq(idColumn(idOrSlug), idOrSlug)
     .single()
   if (error) throw error
   const event = data as DbEvent

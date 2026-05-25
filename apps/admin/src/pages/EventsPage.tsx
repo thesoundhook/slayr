@@ -147,10 +147,10 @@ export default function EventsPage() {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => navigate(`/events/${event.id}/attendees`)} title="Attendees">
+                    <Button variant="ghost" size="icon" onClick={() => navigate(`/events/${event.slug}/attendees`)} title="Attendees">
                       <Users className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => navigate(`/events/${event.id}/edit`)} title="Edit">
+                    <Button variant="ghost" size="icon" onClick={() => navigate(`/events/${event.slug}/edit`)} title="Edit">
                       <Pencil className="h-4 w-4" />
                     </Button>
                     {event.status !== 'cancelled' && (

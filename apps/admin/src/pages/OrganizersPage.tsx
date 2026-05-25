@@ -112,7 +112,7 @@ export default function OrganizersPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => navigate(`/organizers/${org.id}/edit`)} title="Edit">
+                      <Button variant="ghost" size="icon" onClick={() => navigate(`/organizers/${org.slug}/edit`)} title="Edit">
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => handleDelete(org.id, org.name)} title="Delete" className="text-destructive hover:text-destructive">

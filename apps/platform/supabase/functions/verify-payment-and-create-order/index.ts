@@ -247,7 +247,7 @@ serve(async (req) => {
     const subtotal = (items as any[]).reduce(
       (sum: number, i: any) => sum + i.unitPrice * i.quantity, 0
     )
-    const fees = Math.round(subtotal * 0.05)
+    const fees = Math.round(subtotal * 0.03)
     const total = subtotal + fees
     log('step 3: computed totals', { subtotal, fees, total, paystackAmount: txn.amount })
 

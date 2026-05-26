@@ -21,7 +21,7 @@ export function CheckoutPage() {
     phone: '',
   })
 
-  const fees = getTotalPrice() * 0.05
+  const fees = getTotalPrice() * 0.03
   const total = getTotalPrice() + fees
 
   // Track whether we navigated away intentionally so the empty-cart guard

@@ -7,6 +7,7 @@ import { EventDetailPage } from './pages/EventDetailPage'
 import { CartPage } from './pages/CartPage'
 import { CheckoutPage } from './pages/CheckoutPage'
 import { OrderConfirmationPage } from './pages/OrderConfirmationPage'
+import { trackPageView } from './lib/analytics'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -16,10 +17,19 @@ function ScrollToTop() {
   return null
 }
 
+function AnalyticsTracker() {
+  const { pathname, search } = useLocation()
+  useEffect(() => {
+    trackPageView(pathname + search)
+  }, [pathname, search])
+  return null
+}
+
 function App() {
   return (
     <Layout>
       <ScrollToTop />
+      <AnalyticsTracker />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/events" element={<EventsPage />} />

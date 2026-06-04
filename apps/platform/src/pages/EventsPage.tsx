@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Search, Calendar, MapPin } from 'lucide-react'
+import { Search, Calendar, MapPin, Ticket } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Card, CardHeader } from '../components/ui/Card'
@@ -181,36 +181,18 @@ export function EventsPage() {
                         <p className="text-sm text-muted-foreground line-clamp-2">
                           {event.description}
                         </p>
-                        <div className="space-y-2">
-                          <div className="flex items-center text-muted-foreground text-sm">
-                            <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
-                            <span className="truncate">{event.venue.name}, {event.venue.city}</span>
+                        <div className="flex items-center text-muted-foreground text-sm">
+                          <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
+                          <span className="truncate">{event.venue.name}, {event.venue.city}</span>
+                        </div>
+                        <div className="flex items-center justify-between pt-1 border-t border-border/50">
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Ticket className="w-3.5 h-3.5" />
+                            <span>Tickets from</span>
                           </div>
-                          <div className="flex items-center justify-between">
-                            {/* <div className="flex items-center text-muted-foreground text-sm">
-                              <Users className="w-4 h-4 mr-2" />
-                              <span>{event.soldTickets.toLocaleString()} attending</span>
-                            </div> */}
-                            <div className="text-right">
-                              <div className="text-lg font-semibold">
-                                {formatPrice(Math.min(...event.ticketTypes.map(t => t.price)))}
-                              </div>
-                              <div className="text-xs text-muted-foreground">starting from</div>
-                            </div>
-                          </div>
-
-                          {/* Availability indicator */}
-                          <div className="mt-3 w-full bg-border rounded-full h-1.5 overflow-hidden">
-                            <div
-                              className="h-full bg-primary rounded-full transition-all duration-300"
-                              style={{
-                                width: `${Math.min(100, ((event.totalCapacity - event.soldTickets) / event.totalCapacity) * 100)}%`
-                              }}
-                            />
-                          </div>
-                          <div className="text-xs text-muted-foreground text-center">
-                            {event.totalCapacity - event.soldTickets} tickets available
-                          </div>
+                          <span className="text-base font-bold text-primary">
+                            {formatPrice(Math.min(...event.ticketTypes.map(t => t.price)))}
+                          </span>
                         </div>
                       </CardHeader>
                     </Card>

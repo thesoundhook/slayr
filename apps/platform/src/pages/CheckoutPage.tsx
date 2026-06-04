@@ -21,7 +21,8 @@ export function CheckoutPage() {
     phone: '',
   })
 
-  const fees = getTotalPrice() * 0.03
+  const feeRate = (items[0]?.event.serviceFeePercentage ?? 4.5) / 100
+  const fees = getTotalPrice() * feeRate
   const total = getTotalPrice() + fees
 
   // Track whether we navigated away intentionally so the empty-cart guard
@@ -255,7 +256,7 @@ export function CheckoutPage() {
                         <span>{formatPrice(getTotalPrice())}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span>Service fees (5%)</span>
+                        <span>Service fees ({((items[0]?.event.serviceFeePercentage ?? 4.5))}%)</span>
                         <span>{formatPrice(fees)}</span>
                       </div>
                       <div className="flex justify-between font-semibold text-lg pt-2 border-t border-border/50">

@@ -247,9 +247,24 @@ serve(async (req) => {
     const subtotal = (items as any[]).reduce(
       (sum: number, i: any) => sum + i.unitPrice * i.quantity, 0
     )
-    const fees = Math.round(subtotal * 0.03)
+
+    // Fetch service fee percentage from the first event in the order
+    const firstEventId = (items as any[])[0]?.eventId
+    let feePercentage = 4.5
+    if (firstEventId) {
+      const { data: eventRow } = await supabase
+        .from('events')
+        .select('service_fee_percentage')
+        .eq('id', firstEventId)
+        .single()
+      if (eventRow?.service_fee_percentage != null) {
+        feePercentage = eventRow.service_fee_percentage
+      }
+    }
+
+    const fees = Math.round(subtotal * (feePercentage / 100))
     const total = subtotal + fees
-    log('step 3: computed totals', { subtotal, fees, total, paystackAmount: txn.amount })
+    log('step 3: computed totals', { subtotal, fees, total, paystackAmount: txn.amount, feePercentage })
 
     if (txn.amount !== total) {
       log('step 3: amount mismatch — bailing')

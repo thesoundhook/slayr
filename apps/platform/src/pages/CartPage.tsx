@@ -9,7 +9,8 @@ import { formatPrice } from '../lib/utils'
 export function CartPage() {
   const { items, updateQuantity, removeItem, clearCart, getTotalPrice } = useCartStore()
 
-  const fees = getTotalPrice() * 0.1
+  const feeRate = (items[0]?.event.serviceFeePercentage ?? 4.5) / 100
+  const fees = getTotalPrice() * feeRate
   const total = getTotalPrice() + fees
 
   if (items.length === 0) {

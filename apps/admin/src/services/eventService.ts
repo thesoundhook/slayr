@@ -39,6 +39,7 @@ export interface EventFormData {
   total_capacity: number
   featured: boolean
   status: 'upcoming' | 'ongoing' | 'past' | 'cancelled'
+  service_fee_percentage: number
 }
 
 export interface TicketTypeFormData {

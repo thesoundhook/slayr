@@ -57,6 +57,7 @@ export interface DbEvent {
   sold_tickets: number
   featured: boolean
   status: 'upcoming' | 'ongoing' | 'past' | 'cancelled'
+  service_fee_percentage: number
   created_at: string
   updated_at: string
   // joined relations

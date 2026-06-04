@@ -57,6 +57,7 @@ function mapDbEvent(row: DbEvent): Event {
     soldTickets: row.sold_tickets,
     featured: row.featured,
     status: row.status,
+    serviceFeePercentage: row.service_fee_percentage,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }

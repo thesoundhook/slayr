@@ -149,8 +149,7 @@ export function PrintedTicket({
             </div>
 
             {/* Availability */}
-            <div className="flex items-center justify-between text-xs text-slate-400 mb-3">
-              <span>{available} remaining</span>
+            <div className="flex items-center justify-end text-xs text-slate-400 mb-3">
               <span>Max {ticketType.maxPerOrder}</span>
             </div>
 

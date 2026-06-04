@@ -82,6 +82,7 @@ export default function EventFormPage() {
     total_capacity: 0,
     featured: false,
     status: 'upcoming',
+    service_fee_percentage: 4.5,
   })
 
   const [tagInput, setTagInput] = useState('')
@@ -127,6 +128,7 @@ export default function EventFormPage() {
           total_capacity: event.total_capacity,
           featured: event.featured,
           status: event.status,
+          service_fee_percentage: event.service_fee_percentage,
         })
         if (event.ticket_types && event.ticket_types.length > 0) {
           setTickets(event.ticket_types.map(tt => ({
@@ -386,6 +388,21 @@ export default function EventFormPage() {
                 placeholder={form.tags.length === 0 ? 'afrobeats, party…  (comma or Enter to add)' : ''}
                 className="flex-1 min-w-28 bg-transparent text-sm focus:outline-none"
               />
+            </div>
+          </Field>
+
+          <Field label="Service fee (%)">
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={0}
+                max={100}
+                step={0.1}
+                value={form.service_fee_percentage}
+                onChange={e => setForm(f => ({ ...f, service_fee_percentage: parseFloat(e.target.value) || 0 }))}
+                className="flex h-10 w-32 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+              <span className="text-sm text-muted-foreground">% added to ticket price at checkout</span>
             </div>
           </Field>
 

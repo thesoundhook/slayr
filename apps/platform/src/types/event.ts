@@ -15,6 +15,7 @@ export interface Event {
   soldTickets: number;
   featured: boolean;
   status: 'upcoming' | 'ongoing' | 'past' | 'cancelled';
+  serviceFeePercentage: number;
   createdAt: string;
   updatedAt: string;
 }

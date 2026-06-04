@@ -21,7 +21,8 @@ export function CheckoutPage() {
     phone: '',
   })
 
-  const feeRate = (items[0]?.event.serviceFeePercentage ?? 4.5) / 100
+  const [feePercentage, setFeePercentage] = useState<number>(items[0]?.event.serviceFeePercentage ?? 4.5)
+  const feeRate = feePercentage / 100
   const fees = getTotalPrice() * feeRate
   const total = getTotalPrice() + fees
 
@@ -32,7 +33,18 @@ export function CheckoutPage() {
   useEffect(() => {
     if (items.length === 0 && !navigatedToOrder.current) {
       navigate('/cart')
+      return
     }
+    const eventId = items[0]?.eventId
+    if (!eventId) return
+    supabase
+      .from('events')
+      .select('service_fee_percentage')
+      .eq('id', eventId)
+      .single()
+      .then(({ data }) => {
+        if (data?.service_fee_percentage != null) setFeePercentage(data.service_fee_percentage)
+      })
   }, [items.length, navigate])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -256,7 +268,7 @@ export function CheckoutPage() {
                         <span>{formatPrice(getTotalPrice())}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span>Service fees ({((items[0]?.event.serviceFeePercentage ?? 4.5))}%)</span>
+                        <span>Service fees ({feePercentage}%)</span>
                         <span>{formatPrice(fees)}</span>
                       </div>
                       <div className="flex justify-between font-semibold text-lg pt-2 border-t border-border/50">

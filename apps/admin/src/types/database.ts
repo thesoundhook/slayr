@@ -146,6 +146,7 @@ export interface DbEventPaymentSettings {
   transfer_account_number: string | null
   transfer_account_name: string | null
   transfer_instructions: string | null
+  notify_whatsapp_number: string | null
   updated_at: string
 }
 

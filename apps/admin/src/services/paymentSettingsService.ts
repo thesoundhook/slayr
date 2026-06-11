@@ -11,6 +11,7 @@ export interface PaymentSettingsFormData {
   transfer_account_number: string | null
   transfer_account_name: string | null
   transfer_instructions: string | null
+  notify_whatsapp_number: string | null
 }
 
 export const DEFAULT_PAYMENT_SETTINGS: PaymentSettingsFormData = {
@@ -23,6 +24,7 @@ export const DEFAULT_PAYMENT_SETTINGS: PaymentSettingsFormData = {
   transfer_account_number: null,
   transfer_account_name: null,
   transfer_instructions: null,
+  notify_whatsapp_number: null,
 }
 
 export async function getPaymentSettings(eventId: string): Promise<DbEventPaymentSettings | null> {

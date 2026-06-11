@@ -99,10 +99,18 @@ export default function EventOrdersPage() {
     return () => { supabase.removeChannel(channel) }
   }, [event, loadOrders])
 
+  const notifyWhatsapp = async (orderId: string, kind: 'placed' | 'paid' | 'status') => {
+    try { await supabase.functions.invoke('send-whatsapp', { body: { orderId, kind } }) }
+    catch (e) { console.warn('[whatsapp] notify failed', e) }
+  }
+
   const updateStatus = async (order: TableOrder, status: OrderStatus) => {
     setUpdating(order.id)
     const { error } = await supabase.from('table_orders').update({ status }).eq('id', order.id)
-    if (!error) setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status } : o))
+    if (!error) {
+      setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status } : o))
+      notifyWhatsapp(order.id, 'status')
+    }
     setUpdating(null)
   }
 
@@ -111,7 +119,10 @@ export default function EventOrdersPage() {
     // Confirm the order too if it's still pending, so payment + fulfilment move together
     const patch = { is_paid: true, ...(order.status === 'pending' ? { status: 'confirmed' as OrderStatus } : {}) }
     const { error } = await supabase.from('table_orders').update(patch).eq('id', order.id)
-    if (!error) setOrders(prev => prev.map(o => o.id === order.id ? { ...o, ...patch } : o))
+    if (!error) {
+      setOrders(prev => prev.map(o => o.id === order.id ? { ...o, ...patch } : o))
+      notifyWhatsapp(order.id, 'paid')
+    }
     setUpdating(null)
   }
 

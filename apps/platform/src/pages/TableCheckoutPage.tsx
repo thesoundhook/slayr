@@ -69,6 +69,12 @@ export function TableCheckoutPage() {
   const subtotal = cartItems.reduce((s, e) => s + e.item.price * e.quantity, 0)
   const total    = subtotal
 
+  // Best-effort WhatsApp notification — never blocks the order flow
+  const notifyWhatsapp = async (orderId: string, kind: 'placed' | 'paid' | 'status') => {
+    try { await supabase.functions.invoke('send-whatsapp', { body: { orderId, kind } }) }
+    catch (e) { console.warn('[whatsapp] notify failed', e) }
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!event || !form.name.trim() || !form.phone.trim()) return
@@ -125,6 +131,7 @@ export function TableCheckoutPage() {
         })))
       if (itemsErr) throw new Error(itemsErr.message)
 
+      await notifyWhatsapp(order.id, 'placed')
       sessionStorage.removeItem(CART_KEY)
       navigate(`/e/${slug}/order/${order.id}?table=${tableNumber}`)
     } catch (err: unknown) {
@@ -189,6 +196,7 @@ export function TableCheckoutPage() {
         throw new Error(msg)
       }
       if (!data?.orderId) throw new Error(`No orderId returned. Response: ${JSON.stringify(data)}`)
+      await notifyWhatsapp(data.orderId, 'placed')
       sessionStorage.removeItem(CART_KEY)
       navigate(`/e/${slug}/order/${data.orderId}?table=${tableNumber}`)
     } catch (err: unknown) {

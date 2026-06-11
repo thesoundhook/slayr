@@ -47,6 +47,7 @@ export default function EventPaymentsPage() {
             transfer_account_number: s.transfer_account_number,
             transfer_account_name: s.transfer_account_name,
             transfer_instructions: s.transfer_instructions,
+            notify_whatsapp_number: s.notify_whatsapp_number,
           })
         }
       })
@@ -244,6 +245,25 @@ export default function EventPaymentsPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* WhatsApp notifications */}
+        <Card>
+          <CardHeader><CardTitle className="text-base">WhatsApp notifications</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Guests automatically get order updates on the phone number they provide. Optionally add a staff number to receive a WhatsApp alert for every new order.
+            </p>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Staff alert number (optional)</label>
+              <Input
+                value={settings.notify_whatsapp_number ?? ''}
+                onChange={e => patch({ notify_whatsapp_number: e.target.value || null })}
+                placeholder="e.g. 08012345678"
+                inputMode="tel"
+              />
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Save */}
         <div className="flex items-center gap-3">

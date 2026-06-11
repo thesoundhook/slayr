@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/Input'
 import { NumericInput } from '@/components/ui/NumericInput'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import ImageUpload from '@/components/ui/ImageUpload'
-import { ArrowLeft, Plus, Trash2, ChevronDown, ChevronUp, ExternalLink, X } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, ChevronDown, ChevronUp, ExternalLink, X, TableProperties } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import PageHero from '@/components/ui/PageHero'
 
@@ -31,6 +31,7 @@ const emptyTicket = (): TicketTypeFormData => ({
   sales_start: null,
   sales_end: null,
   type: 'general',
+  is_table_ticket: false,
 })
 
 type FieldErrors = Partial<Record<string, string>>
@@ -142,6 +143,7 @@ export default function EventFormPage() {
             sales_start: tt.sales_start,
             sales_end: tt.sales_end,
             type: tt.type,
+            is_table_ticket: tt.is_table_ticket,
           })))
         }
       } else {
@@ -473,6 +475,11 @@ export default function EventFormPage() {
                       {ticket.type}
                     </span>
                     <span className="font-medium text-sm">{ticket.name || `Ticket Type ${idx + 1}`}</span>
+                    {ticket.is_table_ticket && (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                        <TableProperties className="h-3 w-3" /> Table
+                      </span>
+                    )}
                     {!collapsed && ticket.price > 0 && (
                       <span className="text-xs text-muted-foreground">₦{(ticket.price / 100).toLocaleString()} · {ticket.quantity.toLocaleString()} available</span>
                     )}
@@ -548,6 +555,25 @@ export default function EventFormPage() {
                         placeholder="What's included with this ticket?"
                       />
                     </Field>
+
+                    <div className="flex items-center gap-3 rounded-lg border px-4 py-3 bg-muted/30">
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={ticket.is_table_ticket}
+                        onClick={() => updateTicket(idx, 'is_table_ticket', !ticket.is_table_ticket)}
+                        className={cn(
+                          'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors',
+                          ticket.is_table_ticket ? 'bg-amber-500' : 'bg-input'
+                        )}
+                      >
+                        <span className={cn('pointer-events-none block h-4 w-4 rounded-full bg-white shadow transition-transform', ticket.is_table_ticket ? 'translate-x-4' : 'translate-x-0')} />
+                      </button>
+                      <div>
+                        <p className="text-sm font-medium leading-none">Table ticket</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Each purchase of this ticket gets a table assigned via QR code</p>
+                      </div>
+                    </div>
 
                     {ticket.original_price === null && ticket.type !== 'early-bird' ? null : (
                       <Field label="Original price (₦) — shown as strikethrough">

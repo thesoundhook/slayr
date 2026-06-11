@@ -53,6 +53,7 @@ export interface TicketTypeFormData {
   sales_start: string | null
   sales_end: string | null
   type: 'general' | 'vip' | 'early-bird' | 'group'
+  is_table_ticket: boolean
 }
 
 export async function createEvent(eventData: EventFormData, ticketTypes: TicketTypeFormData[]) {

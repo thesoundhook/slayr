@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/Table'
 import { formatDateShort } from '@/lib/utils'
-import { Plus, Pencil, Trash2, Users, Ban, Search } from 'lucide-react'
+import { Plus, Pencil, Trash2, Users, Ban, Search, QrCode, UtensilsCrossed, ClipboardList } from 'lucide-react'
 
 const statusVariant: Record<string, 'default' | 'success' | 'warning' | 'destructive'> = {
   upcoming: 'success',
@@ -149,6 +149,15 @@ export default function EventsPage() {
                   <div className="flex items-center justify-end gap-1">
                     <Button variant="ghost" size="icon" onClick={() => navigate(`/events/${event.slug}/attendees`)} title="Attendees">
                       <Users className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => navigate(`/events/${event.slug}/tables`)} title="Tables & QR codes">
+                      <QrCode className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => navigate(`/events/${event.slug}/menu`)} title="Menu">
+                      <UtensilsCrossed className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => navigate(`/events/${event.slug}/orders`)} title="Live orders">
+                      <ClipboardList className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => navigate(`/events/${event.slug}/edit`)} title="Edit">
                       <Pencil className="h-4 w-4" />

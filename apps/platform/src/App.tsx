@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route, Outlet, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import { Layout } from './components/layout/Layout'
 import { HomePage } from './pages/HomePage'
@@ -7,7 +7,18 @@ import { EventDetailPage } from './pages/EventDetailPage'
 import { CartPage } from './pages/CartPage'
 import { CheckoutPage } from './pages/CheckoutPage'
 import { OrderConfirmationPage } from './pages/OrderConfirmationPage'
+import { MenuPage } from './pages/MenuPage'
+import { TableCheckoutPage } from './pages/TableCheckoutPage'
+import { TableOrderConfirmPage } from './pages/TableOrderConfirmPage'
 import { trackPageView } from './lib/analytics'
+
+function LayoutWrapper() {
+  return (
+    <Layout>
+      <Outlet />
+    </Layout>
+  )
+}
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -27,18 +38,26 @@ function AnalyticsTracker() {
 
 function App() {
   return (
-    <Layout>
+    <>
       <ScrollToTop />
       <AnalyticsTracker />
       <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/events" element={<EventsPage />} />
-        <Route path="/events/:id" element={<EventDetailPage />} />
-        <Route path="/cart" element={<CartPage />} />
-        <Route path="/checkout" element={<CheckoutPage />} />
-        <Route path="/orders/:id" element={<OrderConfirmationPage />} />
+        {/* Standalone table pages — no navbar/footer */}
+        <Route path="/e/:slug/menu" element={<MenuPage />} />
+        <Route path="/e/:slug/checkout" element={<TableCheckoutPage />} />
+        <Route path="/e/:slug/order/:orderId" element={<TableOrderConfirmPage />} />
+
+        {/* Main site with shared layout */}
+        <Route element={<LayoutWrapper />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/events" element={<EventsPage />} />
+          <Route path="/events/:id" element={<EventDetailPage />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/orders/:id" element={<OrderConfirmationPage />} />
+        </Route>
       </Routes>
-    </Layout>
+    </>
   )
 }
 

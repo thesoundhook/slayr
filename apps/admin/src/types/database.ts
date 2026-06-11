@@ -35,6 +35,7 @@ export interface DbTicketType {
   sales_end: string | null
   type: 'general' | 'vip' | 'early-bird' | 'group'
   is_archived: boolean
+  is_table_ticket: boolean
   created_at: string
 }
 
@@ -100,6 +101,39 @@ export interface DbTicket {
   created_at: string
 }
 
+
+export interface DbEventTable {
+  id: string
+  event_id: string
+  table_number: number
+  name: string | null
+  label: string | null
+  ticket_type_id: string | null
+  created_at: string
+  ticket_types?: { id: string; name: string; type: string }
+}
+
+export interface DbMenuCategory {
+  id: string
+  event_id: string
+  name: string
+  display_order: number
+  created_at: string
+  menu_items?: DbMenuItem[]
+}
+
+export interface DbMenuItem {
+  id: string
+  category_id: string
+  event_id: string
+  name: string
+  description: string | null
+  price: number
+  image_url: string | null
+  is_available: boolean
+  display_order: number
+  created_at: string
+}
 
 export interface DbBrief {
   id: string

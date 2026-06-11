@@ -135,6 +135,20 @@ export interface DbMenuItem {
   created_at: string
 }
 
+export interface DbEventPaymentSettings {
+  event_id: string
+  ordering_enabled: boolean
+  accept_online: boolean
+  accept_pos: boolean
+  accept_transfer: boolean
+  transfer_bank_code: string | null
+  transfer_bank_name: string | null
+  transfer_account_number: string | null
+  transfer_account_name: string | null
+  transfer_instructions: string | null
+  updated_at: string
+}
+
 export interface DbBrief {
   id: string
   slug: string

@@ -34,8 +34,10 @@ alter table public.table_order_items enable row level security;
 -- Grants
 grant select, insert, update, delete on table public.table_orders      to authenticated;
 grant select, insert                  on table public.table_orders      to anon;
+grant select, insert, update, delete on table public.table_orders      to service_role;
 grant select, insert, update, delete on table public.table_order_items to authenticated;
 grant select, insert                  on table public.table_order_items to anon;
+grant select, insert, update, delete on table public.table_order_items to service_role;
 
 -- table_orders: admins can do everything
 drop policy if exists "Admins can manage table_orders" on public.table_orders;

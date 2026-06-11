@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, RefreshCw, Clock, CheckCircle2, ChefHat, Truck, XCircle } from 'lucide-react'
+import { ArrowLeft, RefreshCw, Clock, CheckCircle2, ChefHat, Truck, XCircle, Wallet, CreditCard, BadgeCheck, Banknote, Image as ImageIcon } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getEventById } from '@/services/eventService'
 import type { DbEvent } from '@/types/database'
@@ -28,6 +28,9 @@ interface TableOrder {
   subtotal: number
   total: number
   status: OrderStatus
+  payment_method: 'online' | 'pos' | 'transfer'
+  is_paid: boolean
+  payment_proof_url: string | null
   created_at: string
   table_order_items: TableOrderItem[]
 }
@@ -103,6 +106,15 @@ export default function EventOrdersPage() {
     setUpdating(null)
   }
 
+  const markPaid = async (order: TableOrder) => {
+    setUpdating(order.id)
+    // Confirm the order too if it's still pending, so payment + fulfilment move together
+    const patch = { is_paid: true, ...(order.status === 'pending' ? { status: 'confirmed' as OrderStatus } : {}) }
+    const { error } = await supabase.from('table_orders').update(patch).eq('id', order.id)
+    if (!error) setOrders(prev => prev.map(o => o.id === order.id ? { ...o, ...patch } : o))
+    setUpdating(null)
+  }
+
   const filtered = orders.filter(o => statusFilter === 'all' || o.status === statusFilter)
 
   // Group by table number
@@ -113,6 +125,7 @@ export default function EventOrdersPage() {
   }, {})
 
   const pendingCount = orders.filter(o => o.status === 'pending').length
+  const unpaidCount  = orders.filter(o => !o.is_paid && o.status !== 'cancelled').length
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>
   if (!event)  return <div className="p-6 text-muted-foreground">Event not found.</div>
@@ -129,6 +142,11 @@ export default function EventOrdersPage() {
             {pendingCount > 0 && (
               <span className="text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200 rounded-full px-3 py-1 animate-pulse">
                 {pendingCount} pending
+              </span>
+            )}
+            {unpaidCount > 0 && (
+              <span className="text-xs font-semibold bg-red-100 text-red-700 border border-red-200 rounded-full px-3 py-1">
+                {unpaidCount} unpaid
               </span>
             )}
             <Button variant="outline" size="sm" onClick={() => event && loadOrders(event.id)}>
@@ -186,18 +204,44 @@ export default function EventOrdersPage() {
                   const cfg = STATUS_CONFIG[order.status]
                   const StatusIcon = cfg.icon
                   return (
-                    <Card key={order.id} className={cn('overflow-hidden', order.status === 'pending' && 'ring-1 ring-amber-300')}>
+                    <Card key={order.id} className={cn('overflow-hidden', !order.is_paid && 'ring-1 ring-amber-300')}>
                       {/* Card header */}
                       <CardHeader className="pb-2 pt-4 px-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <CardTitle className="text-sm">{order.customer_name}</CardTitle>
-                            <p className="text-xs text-muted-foreground mt-0.5">{formatTime(order.created_at)}</p>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <CardTitle className="text-sm truncate">{order.customer_name}</CardTitle>
+                            <p className="text-xs text-muted-foreground mt-0.5">{order.customer_phone} · {formatTime(order.created_at)}</p>
                           </div>
-                          <Badge variant={cfg.variant} className="flex items-center gap-1 capitalize">
+                          <Badge variant={cfg.variant} className="flex items-center gap-1 capitalize shrink-0">
                             <StatusIcon className="h-3 w-3" />
                             {cfg.label}
                           </Badge>
+                        </div>
+                        {/* Payment row */}
+                        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                            {order.payment_method === 'pos' ? <Wallet className="h-3 w-3" /> : order.payment_method === 'transfer' ? <Banknote className="h-3 w-3" /> : <CreditCard className="h-3 w-3" />}
+                            {order.payment_method === 'pos' ? 'Pay at table' : order.payment_method === 'transfer' ? 'Transfer' : 'Online'}
+                          </span>
+                          {order.is_paid ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-green-700 bg-green-100 border border-green-200 px-2 py-0.5 rounded-full">
+                              <BadgeCheck className="h-3 w-3" /> Paid
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-semibold text-amber-700 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full">
+                              Unpaid
+                            </span>
+                          )}
+                          {order.payment_proof_url && (
+                            <a
+                              href={order.payment_proof_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                            >
+                              <ImageIcon className="h-3 w-3" /> View proof
+                            </a>
+                          )}
                         </div>
                       </CardHeader>
 
@@ -217,6 +261,18 @@ export default function EventOrdersPage() {
                           <span>Total</span>
                           <span>{formatPrice(order.total)}</span>
                         </div>
+
+                        {/* Mark paid — for unpaid orders (POS) */}
+                        {!order.is_paid && order.status !== 'cancelled' && (
+                          <Button
+                            size="sm"
+                            className="w-full text-xs bg-green-600 hover:bg-green-700"
+                            onClick={() => markPaid(order)}
+                            disabled={updating === order.id}
+                          >
+                            {updating === order.id ? <RefreshCw className="h-3 w-3 animate-spin" /> : <><BadgeCheck className="h-3.5 w-3.5" /> Mark as Paid</>}
+                          </Button>
+                        )}
 
                         {/* Action buttons */}
                         <div className="flex gap-2 pt-1">

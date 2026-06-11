@@ -24,6 +24,7 @@ import OrganizerFormPage from '@/pages/OrganizerFormPage'
 import EventTablesPage from '@/pages/EventTablesPage'
 import EventMenuPage from '@/pages/EventMenuPage'
 import EventOrdersPage from '@/pages/EventOrdersPage'
+import EventPaymentsPage from '@/pages/EventPaymentsPage'
 
 function ProtectedRoute({ session, children }: { session: Session | null; children: React.ReactNode }) {
   if (!session) return <Navigate to="/login" replace />
@@ -90,6 +91,7 @@ function AppRoutes({ session }: { session: Session | null }) {
         <Route path="events/:id/tables" element={<RequirePermission perm="events.edit"><EventTablesPage /></RequirePermission>} />
         <Route path="events/:id/menu" element={<RequirePermission perm="events.edit"><EventMenuPage /></RequirePermission>} />
         <Route path="events/:id/orders" element={<RequirePermission perm="events.edit"><EventOrdersPage /></RequirePermission>} />
+        <Route path="events/:id/payments" element={<RequirePermission perm="events.edit"><EventPaymentsPage /></RequirePermission>} />
         <Route path="scan" element={<RequirePermission perm="scan"><ScanPage /></RequirePermission>} />
         <Route path="orders" element={<RequirePermission perm="orders.view"><OrdersPage /></RequirePermission>} />
         <Route path="orders/:id" element={<RequirePermission perm="orders.view"><OrderDetailPage /></RequirePermission>} />

@@ -15,6 +15,48 @@ export interface MenuCategory {
   items: MenuItem[]
 }
 
+export interface EventPaymentSettings {
+  orderingEnabled: boolean
+  acceptOnline: boolean
+  acceptPos: boolean
+  acceptTransfer: boolean
+  transferBankName: string | null
+  transferAccountNumber: string | null
+  transferAccountName: string | null
+  transferInstructions: string | null
+}
+
+const DEFAULT_SETTINGS: EventPaymentSettings = {
+  orderingEnabled: true,
+  acceptOnline: true,
+  acceptPos: false,
+  acceptTransfer: false,
+  transferBankName: null,
+  transferAccountNumber: null,
+  transferAccountName: null,
+  transferInstructions: null,
+}
+
+export async function getPaymentSettings(eventId: string): Promise<EventPaymentSettings> {
+  const { data, error } = await supabase
+    .from('event_payment_settings')
+    .select('*')
+    .eq('event_id', eventId)
+    .maybeSingle()
+  if (error) throw error
+  if (!data) return DEFAULT_SETTINGS
+  return {
+    orderingEnabled:       data.ordering_enabled,
+    acceptOnline:          data.accept_online,
+    acceptPos:             data.accept_pos,
+    acceptTransfer:        data.accept_transfer,
+    transferBankName:      data.transfer_bank_name,
+    transferAccountNumber: data.transfer_account_number,
+    transferAccountName:   data.transfer_account_name,
+    transferInstructions:  data.transfer_instructions,
+  }
+}
+
 export async function getMenuByEvent(eventId: string): Promise<MenuCategory[]> {
   const { data, error } = await supabase
     .from('menu_categories')

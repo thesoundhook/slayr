@@ -3,7 +3,7 @@ import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Calendar, MapPin, Clock, UtensilsCrossed, Users, CheckCircle, Plus, Minus, ShoppingBag } from 'lucide-react'
 import { getEventById } from '../services/eventService'
-import { getMenuByEvent, type MenuCategory, type MenuItem } from '../services/menuService'
+import { getMenuByEvent, getPaymentSettings, type MenuCategory, type MenuItem } from '../services/menuService'
 import { formatDate, formatTime, formatPrice } from '../lib/utils'
 import { Card, CardContent } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
@@ -31,6 +31,7 @@ export function MenuPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError]   = useState<string | null>(null)
   const [cart, setCart]     = useState<Record<string, CartEntry>>({})
+  const [orderingEnabled, setOrderingEnabled] = useState(true)
 
   useEffect(() => {
     if (!slug) return
@@ -38,8 +39,12 @@ export function MenuPage() {
       .then(async ev => {
         setEvent(ev)
         if (ev) {
-          const cats = await getMenuByEvent(ev.id)
+          const [cats, settings] = await Promise.all([
+            getMenuByEvent(ev.id),
+            getPaymentSettings(ev.id),
+          ])
           setMenu(cats)
+          setOrderingEnabled(settings.orderingEnabled)
         }
       })
       .catch(err => setError((err as Error).message))
@@ -236,8 +241,8 @@ export function MenuPage() {
                                       <p className="text-sm font-bold text-primary">
                                         {item.price > 0 ? formatPrice(item.price / 100) : 'Free'}
                                       </p>
-                                      {/* +/- controls */}
-                                      {qty === 0 ? (
+                                      {/* +/- controls — hidden when ordering is off */}
+                                      {!orderingEnabled ? null : qty === 0 ? (
                                         <button
                                           onClick={() => addToCart(item)}
                                           className="flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-full px-3 py-1.5 transition-colors"

@@ -41,10 +41,10 @@ export function TableOrderConfirmPage() {
       .eq('id', orderId)
       .single()
       .then(({ data, error: err }) => {
-        if (err) { setError(err.message); return }
-        setOrder(data as Order)
+        if (err) setError(err.message)
+        else setOrder(data as Order)
+        setLoading(false)
       })
-      .finally(() => setLoading(false))
   }, [orderId])
 
   if (loading) {

@@ -80,6 +80,31 @@ serve(async (req) => {
     const customerNumber = normalizeNumber(order.customer_phone)
     const results: Record<string, unknown> = {}
 
+    // The event staff-alert field may hold several numbers (comma / newline / semicolon separated).
+    const notifyNumbers = (settings?.notify_whatsapp_number ?? '')
+      .split(/[,\n;]+/)
+      .map((s: string) => s.trim())
+      .filter(Boolean)
+
+    // Debug trace — surfaced in the response so we can see exactly what was
+    // resolved and attempted without digging through function logs.
+    const debug: Record<string, unknown> = {
+      kind,
+      order: {
+        id: order.id,
+        event_id: order.event_id,
+        table_number: order.table_number,
+        status: order.status,
+        is_paid: order.is_paid,
+        payment_method: order.payment_method,
+      },
+      customer: { raw: order.customer_phone, normalized: customerNumber },
+      eventNotify: {
+        raw: settings?.notify_whatsapp_number ?? null,
+        parsed: notifyNumbers.map((n: string) => ({ raw: n, normalized: normalizeNumber(n) })),
+      },
+    }
+
     // A tidy receipt block reused across messages
     const receipt =
 `${itemLines}
@@ -154,13 +179,38 @@ ${orderMeta}`
     // ── Staff alert on new order ──────────────────────────────────────────
     if (kind === 'placed') {
       // The usher assigned to this table (matched by event + table number).
-      const { data: tableRow } = await supabase
+      // Two plain queries instead of a PostgREST embed: embedding event_ushers
+      // depends on the FK relationship being readable through the API layer,
+      // which proved fragile. A direct id lookup is read cleanly by service role.
+      const { data: tableRow, error: tableErr } = await supabase
         .from('event_tables')
-        .select('name, event_ushers(name, phone)')
+        .select('usher_id')
         .eq('event_id', order.event_id)
         .eq('table_number', order.table_number)
         .maybeSingle()
-      const usher = (tableRow as { event_ushers?: { name: string; phone: string } } | null)?.event_ushers
+
+      let usher: { name: string; phone: string } | null = null
+      let usherErr: string | null = null
+      if (tableRow?.usher_id) {
+        const { data: u, error: uErr } = await supabase
+          .from('event_ushers')
+          .select('name, phone')
+          .eq('id', tableRow.usher_id)
+          .maybeSingle()
+        usher = u ?? null
+        usherErr = uErr?.message ?? null
+      }
+
+      debug.usherLookup = {
+        tableFound: !!tableRow,
+        tableError: tableErr?.message ?? null,
+        usherId: tableRow?.usher_id ?? null,
+        usherFound: !!usher,
+        usherError: usherErr,
+        name: usher?.name ?? null,
+        rawPhone: usher?.phone ?? null,
+        normalized: usher?.phone ? normalizeNumber(usher.phone) : null,
+      }
 
       // Collect recipients: the event-wide notify number + the table's usher.
       // Dedupe by normalised number so nobody gets the alert twice.
@@ -169,8 +219,10 @@ ${orderMeta}`
         const n = raw ? normalizeNumber(raw) : null
         if (n && !recipients.some(r => r.number === n)) recipients.push({ label, number: n })
       }
-      pushRecipient('event', settings?.notify_whatsapp_number)
+      notifyNumbers.forEach((num: string, i: number) =>
+        pushRecipient(notifyNumbers.length > 1 ? `event${i + 1}` : 'event', num))
       pushRecipient('usher', usher?.phone)
+      debug.recipients = recipients
 
       if (recipients.length > 0) {
         const methodLabel = order.payment_method === 'pos' ? 'Pay at table (POS/cash)'
@@ -195,7 +247,7 @@ Order #${ref}`
       }
     }
 
-    return json({ ok: true, results })
+    return json({ ok: true, results, debug })
   } catch (err: unknown) {
     return json({ error: err instanceof Error ? err.message : 'Unknown error' }, 500)
   }

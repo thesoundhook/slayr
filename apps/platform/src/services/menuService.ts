@@ -57,6 +57,16 @@ export async function getPaymentSettings(eventId: string): Promise<EventPaymentS
   }
 }
 
+// The name of the usher assigned to a table (null if none / not found).
+export async function getTableUsher(eventId: string, tableNumber: number): Promise<string | null> {
+  const { data, error } = await supabase.rpc('get_table_usher', {
+    p_event_id: eventId,
+    p_table_number: tableNumber,
+  })
+  if (error) return null
+  return (data as string | null) ?? null
+}
+
 export async function getMenuByEvent(eventId: string): Promise<MenuCategory[]> {
   const { data, error } = await supabase
     .from('menu_categories')

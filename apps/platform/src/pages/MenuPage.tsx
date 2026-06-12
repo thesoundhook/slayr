@@ -3,7 +3,7 @@ import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Calendar, MapPin, Clock, UtensilsCrossed, Users, CheckCircle, Plus, Minus, ShoppingBag } from 'lucide-react'
 import { getEventById } from '../services/eventService'
-import { getMenuByEvent, getPaymentSettings, type MenuCategory, type MenuItem } from '../services/menuService'
+import { getMenuByEvent, getPaymentSettings, getTableUsher, type MenuCategory, type MenuItem } from '../services/menuService'
 import { formatDate, formatTime, formatPrice } from '../lib/utils'
 import { Card, CardContent } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
@@ -32,6 +32,7 @@ export function MenuPage() {
   const [error, setError]   = useState<string | null>(null)
   const [cart, setCart]     = useState<Record<string, CartEntry>>({})
   const [orderingEnabled, setOrderingEnabled] = useState(true)
+  const [usherName, setUsherName] = useState<string | null>(null)
 
   useEffect(() => {
     if (!slug) return
@@ -39,17 +40,20 @@ export function MenuPage() {
       .then(async ev => {
         setEvent(ev)
         if (ev) {
-          const [cats, settings] = await Promise.all([
+          const tableNum = tableNumber ? parseInt(tableNumber) : NaN
+          const [cats, settings, usher] = await Promise.all([
             getMenuByEvent(ev.id),
             getPaymentSettings(ev.id),
+            Number.isNaN(tableNum) ? Promise.resolve(null) : getTableUsher(ev.id, tableNum),
           ])
           setMenu(cats)
           setOrderingEnabled(settings.orderingEnabled)
+          setUsherName(usher)
         }
       })
       .catch(err => setError((err as Error).message))
       .finally(() => setLoading(false))
-  }, [slug])
+  }, [slug, tableNumber])
 
   // ── Cart helpers ─────────────────────────────────────────────────────────
   const cartItems    = Object.values(cart)
@@ -175,6 +179,9 @@ export function MenuPage() {
                   <div>
                     <p className="font-semibold text-foreground">Welcome to Table {tableNumber}</p>
                     <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Browse the menu and add items to your order.</p>
+                    {usherName && (
+                      <p className="text-xs text-primary mt-1 font-medium">Your usher: {usherName}</p>
+                    )}
                   </div>
                 </div>
               </motion.div>
@@ -311,6 +318,12 @@ export function MenuPage() {
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     Browse the menu and your order will be brought directly to this table.
                   </p>
+                  {usherName && (
+                    <div className="mt-3 pt-3 border-t border-primary/15">
+                      <p className="text-xs text-muted-foreground">Your usher</p>
+                      <p className="text-sm font-semibold text-primary">{usherName}</p>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}

@@ -102,6 +102,14 @@ export interface DbTicket {
 }
 
 
+export interface DbEventUsher {
+  id: string
+  event_id: string
+  name: string
+  phone: string
+  created_at: string
+}
+
 export interface DbEventTable {
   id: string
   event_id: string
@@ -109,8 +117,10 @@ export interface DbEventTable {
   name: string | null
   label: string | null
   ticket_type_id: string | null
+  usher_id: string | null
   created_at: string
   ticket_types?: { id: string; name: string; type: string }
+  event_ushers?: { id: string; name: string; phone: string }
 }
 
 export interface DbMenuCategory {

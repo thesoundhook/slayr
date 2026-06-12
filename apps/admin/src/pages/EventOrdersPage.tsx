@@ -115,6 +115,15 @@ export default function EventOrdersPage() {
   }
 
   const markPaid = async (order: TableOrder) => {
+    const itemsSummary = order.table_order_items
+      .map(i => `${i.quantity}× ${i.name}`)
+      .join(', ')
+    const ok = confirm(
+      `Confirm payment received for Table ${order.table_number}?\n\n` +
+      `${order.customer_name}\n${itemsSummary}\n\n` +
+      `Total: ${formatPrice(order.total)}`
+    )
+    if (!ok) return
     setUpdating(order.id)
     // Confirm the order too if it's still pending, so payment + fulfilment move together
     const patch = { is_paid: true, ...(order.status === 'pending' ? { status: 'confirmed' as OrderStatus } : {}) }

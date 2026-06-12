@@ -70,51 +70,80 @@ serve(async (req) => {
       .map((i: { name: string; quantity: number; total_price: number }) => `• ${i.quantity}× ${i.name} — ${naira(i.total_price)}`)
       .join('\n')
 
-    // Pull staff notify number from event settings
+    // Pull staff notify number + transfer account from event settings
     const { data: settings } = await supabase
       .from('event_payment_settings')
-      .select('notify_whatsapp_number')
+      .select('notify_whatsapp_number, transfer_bank_name, transfer_account_number, transfer_account_name, transfer_instructions')
       .eq('event_id', order.event_id)
       .maybeSingle()
 
     const customerNumber = normalizeNumber(order.customer_phone)
     const results: Record<string, unknown> = {}
 
+    // A tidy receipt block reused across messages
+    const receipt =
+`${itemLines}
+
+*Total: ${naira(order.total)}*`
+
+    const orderMeta = `${eventTitle} · Table ${order.table_number} · Order #${ref}`
+
     // ── Build customer message ────────────────────────────────────────────
     let customerMsg = ''
     if (kind === 'placed') {
       if (order.is_paid) {
         customerMsg =
-`Hi ${firstName}! ✅ Your order *#${ref}* at *${eventTitle}* (Table ${order.table_number}) is confirmed and being prepared.
+`Hi ${firstName}, thanks for your order — it's confirmed and we've started preparing it.
 
-${itemLines}
-*Total: ${naira(order.total)}*
+${receipt}
 
-We'll bring it over shortly. 🍽️`
+We'll have it brought to your table shortly. Enjoy the evening.
+
+${orderMeta}`
       } else if (order.payment_method === 'transfer') {
+        const acct = settings?.transfer_account_number
+          ? `\nPlease transfer *${naira(order.total)}* to:
+
+Bank: ${settings.transfer_bank_name}
+Account number: *${settings.transfer_account_number}*
+Account name: ${settings.transfer_account_name}${settings.transfer_instructions ? `\n\n${settings.transfer_instructions}` : ''}`
+          : ''
         customerMsg =
-`Hi ${firstName}! We've received your order *#${ref}* at *${eventTitle}* (Table ${order.table_number}).
+`Hi ${firstName}, we've received your order.
+${acct}
 
-${itemLines}
-*Total: ${naira(order.total)}*
+${receipt}
 
-Please complete your transfer — we'll confirm it and start preparing your order.`
+As soon as we confirm your payment, we'll start preparing it. If you've already sent it, please ignore this — we're on it.
+
+${orderMeta}`
       } else {
         customerMsg =
-`Hi ${firstName}! We've received your order *#${ref}* at *${eventTitle}* (Table ${order.table_number}).
+`Hi ${firstName}, we've received your order. One of our attendants will come to your table shortly to collect payment.
 
-${itemLines}
-*Total: ${naira(order.total)}*
+${receipt}
 
-An attendant will come to your table to collect payment.`
+Once that's done, we'll get straight to preparing it.
+
+${orderMeta}`
       }
     } else if (kind === 'paid') {
-      customerMsg = `Hi ${firstName}! 💸 Payment received for order *#${ref}*. Your order is now being prepared. 👨‍🍳`
+      customerMsg =
+`Hi ${firstName}, we've received your payment — thank you. Your order is now being prepared and will be brought to your table shortly.
+
+${receipt}
+
+${orderMeta}`
     } else if (kind === 'status') {
-      if (order.status === 'preparing') customerMsg = `👨‍🍳 Your order *#${ref}* is now being prepared, ${firstName}.`
-      else if (order.status === 'served') customerMsg = `🍽️ Your order *#${ref}* has been served. Enjoy, ${firstName}!`
-      else if (order.status === 'confirmed') customerMsg = `✅ Your order *#${ref}* has been confirmed, ${firstName}.`
-      else if (order.status === 'cancelled') customerMsg = `Your order *#${ref}* has been cancelled. Please speak to a staff member if this is unexpected.`
+      if (order.status === 'preparing') {
+        customerMsg = `Hi ${firstName}, your order is now being prepared and will be at your table soon.\n\n${orderMeta}`
+      } else if (order.status === 'served') {
+        customerMsg = `Hi ${firstName}, your order has been served — enjoy. Feel free to order again any time from your table.\n\n${orderMeta}`
+      } else if (order.status === 'confirmed') {
+        customerMsg = `Hi ${firstName}, your order has been confirmed. We'll begin preparing it shortly.\n\n${orderMeta}`
+      } else if (order.status === 'cancelled') {
+        customerMsg = `Hi ${firstName}, your order has been cancelled. If this wasn't expected or you're due a refund, please speak to a member of staff and we'll sort it out.\n\n${orderMeta}`
+      }
     }
 
     if (customerNumber && customerMsg) {
@@ -123,18 +152,46 @@ An attendant will come to your table to collect payment.`
     }
 
     // ── Staff alert on new order ──────────────────────────────────────────
-    if (kind === 'placed' && settings?.notify_whatsapp_number) {
-      const staffNumber = normalizeNumber(settings.notify_whatsapp_number)
-      if (staffNumber) {
-        const paidTag = order.is_paid ? '✅ Paid' : '⏳ Unpaid'
-        const staffMsg =
-`🔔 *New order · Table ${order.table_number}*
-${order.customer_name} (${order.customer_phone})
+    if (kind === 'placed') {
+      // The usher assigned to this table (matched by event + table number).
+      const { data: tableRow } = await supabase
+        .from('event_tables')
+        .select('name, event_ushers(name, phone)')
+        .eq('event_id', order.event_id)
+        .eq('table_number', order.table_number)
+        .maybeSingle()
+      const usher = (tableRow as { event_ushers?: { name: string; phone: string } } | null)?.event_ushers
 
-${itemLines}
-*Total: ${naira(order.total)}* · ${order.payment_method.toUpperCase()} · ${paidTag}`
-        try { results.staff = await sendText(staffNumber, staffMsg) }
-        catch (e) { results.staffError = (e as Error).message }
+      // Collect recipients: the event-wide notify number + the table's usher.
+      // Dedupe by normalised number so nobody gets the alert twice.
+      const recipients: { label: string; number: string }[] = []
+      const pushRecipient = (label: string, raw?: string | null) => {
+        const n = raw ? normalizeNumber(raw) : null
+        if (n && !recipients.some(r => r.number === n)) recipients.push({ label, number: n })
+      }
+      pushRecipient('event', settings?.notify_whatsapp_number)
+      pushRecipient('usher', usher?.phone)
+
+      if (recipients.length > 0) {
+        const methodLabel = order.payment_method === 'pos' ? 'Pay at table (POS/cash)'
+          : order.payment_method === 'transfer' ? 'Bank transfer'
+          : 'Paid online'
+        const paidTag = order.is_paid ? 'Paid' : 'Awaiting payment'
+        const usherLine = usher ? `\nUsher: ${usher.name}` : ''
+        const staffMsg =
+`*New order — Table ${order.table_number}*
+
+${order.customer_name}
+${order.customer_phone}
+
+${receipt}
+
+Payment: ${methodLabel} (${paidTag})${usherLine}
+Order #${ref}`
+        for (const r of recipients) {
+          try { results[r.label] = await sendText(r.number, staffMsg) }
+          catch (e) { results[`${r.label}Error`] = (e as Error).message }
+        }
       }
     }
 

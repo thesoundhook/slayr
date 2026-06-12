@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { ArrowLeft, Plus, Trash2, Download, QrCode, Loader2, Ticket, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Download, QrCode, Loader2, Ticket, RefreshCw, Users } from 'lucide-react'
 import { getEventById, getTicketTypesByEvent } from '@/services/eventService'
 import { getTablesByEvent, createTables, updateTable, deleteTable } from '@/services/tableService'
-import type { DbEvent, DbEventTable, DbTicketType } from '@/types/database'
+import { getUshersByEvent, createUsher, deleteUsher } from '@/services/usherService'
+import type { DbEvent, DbEventTable, DbTicketType, DbEventUsher } from '@/types/database'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { NumericInput } from '@/components/ui/NumericInput'
@@ -12,10 +13,28 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import PageHero from '@/components/ui/PageHero'
 import { cn } from '@/lib/utils'
 
-const PLATFORM_URL = (import.meta.env.VITE_PLATFORM_URL as string | undefined) ?? 'http://slayr.events'
+const PLATFORM_URL = (import.meta.env.VITE_PLATFORM_URL as string | undefined) ?? 'https://slayr.events'
 
 function tableQrUrl(eventSlug: string, tableNumber: number) {
   return `${PLATFORM_URL}/e/${eventSlug}/menu?table=${tableNumber}`
+}
+
+// Smallest positive integer not already taken.
+function lowestAvailable(taken: Set<number>) {
+  let n = 1
+  while (taken.has(n)) n++
+  return n
+}
+
+// The `count` lowest unused integers >= `from`, filling any gaps along the way.
+function nextAvailableNumbers(taken: Set<number>, count: number, from = 1) {
+  const out: number[] = []
+  let n = Math.max(1, from)
+  while (out.length < count) {
+    if (!taken.has(n)) out.push(n)
+    n++
+  }
+  return out
 }
 
 const TICKET_TYPE_COLORS: Record<string, string> = {
@@ -32,11 +51,13 @@ export default function EventTablesPage() {
   const [event, setEvent] = useState<DbEvent | null>(null)
   const [ticketTypes, setTicketTypes] = useState<DbTicketType[]>([])
   const [tables, setTables] = useState<DbEventTable[]>([])
+  const [ushers, setUshers] = useState<DbEventUsher[]>([])
   const [qrDataUrls, setQrDataUrls] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   // Generate form
+  const [genMode, setGenMode] = useState<'sold' | 'custom'>('sold')
   const [genTicketTypeId, setGenTicketTypeId] = useState('')
   const [genCount, setGenCount] = useState(1)
   const [genStartFrom, setGenStartFrom] = useState(1)
@@ -53,6 +74,11 @@ export default function EventTablesPage() {
   const [editName, setEditName] = useState('')
   const editRef = useRef<HTMLInputElement>(null)
 
+  // Usher management
+  const [usherName, setUsherName] = useState('')
+  const [usherPhone, setUsherPhone] = useState('')
+  const [addingUsher, setAddingUsher] = useState(false)
+
   const [downloadingPdf, setDownloadingPdf] = useState(false)
 
   // Sync
@@ -65,34 +91,44 @@ export default function EventTablesPage() {
     getEventById(id)
       .then(async ev => {
         setEvent(ev)
-        const [tabs, allTts] = await Promise.all([
+        const [tabs, allTts, ushrs] = await Promise.all([
           getTablesByEvent(ev.id),
           getTicketTypesByEvent(ev.id),
+          getUshersByEvent(ev.id),
         ])
         const tts = allTts.filter(t => t.is_table_ticket)
         setTables(tabs)
         setTicketTypes(tts)
+        setUshers(ushrs)
         if (tts.length > 0) {
           setGenTicketTypeId(tts[0].id)
           setSingleTicketTypeId(tts[0].id)
           setGenCount(tts[0].sold)
+        } else {
+          // No table ticket types — only standalone generation makes sense.
+          setGenMode('custom')
         }
       })
       .catch(err => setError((err as Error).message))
       .finally(() => setLoading(false))
   }, [id])
 
-  // Sync genCount when ticket type selection changes
+  // In sold mode, keep the count matched to the selected ticket type's sold count.
   useEffect(() => {
+    if (genMode !== 'sold') return
     const tt = ticketTypes.find(t => t.id === genTicketTypeId)
     if (tt) setGenCount(tt.sold)
-  }, [genTicketTypeId, ticketTypes])
+  }, [genTicketTypeId, ticketTypes, genMode])
 
-  // Sync genStartFrom to next available number for the selected ticket type
+  // Suggest a starting number: lowest free gap in custom mode, next-after-max in sold mode.
   useEffect(() => {
-    const nums = tables.map(t => t.table_number)
-    setGenStartFrom(nums.length > 0 ? Math.max(...nums) + 1 : 1)
-  }, [tables])
+    const taken = new Set(tables.map(t => t.table_number))
+    setGenStartFrom(
+      genMode === 'custom'
+        ? lowestAvailable(taken)
+        : (taken.size > 0 ? Math.max(...taken) + 1 : 1)
+    )
+  }, [tables, genMode])
 
   // Re-generate QR data URLs when tables/event change
   useEffect(() => {
@@ -115,24 +151,26 @@ export default function EventTablesPage() {
 
   // ── Actions ───────────────────────────────────────────────────────────────
   const handleBulkGenerate = async () => {
-    if (!event || !genTicketTypeId) return
+    if (!event) return
+    if (genMode === 'sold' && !genTicketTypeId) return
     setGenerating(true)
     setError(null)
     try {
-      const existing = new Set(tables.map(t => t.table_number))
-      const toCreate = Array.from({ length: genCount }, (_, i) => genStartFrom + i)
-        .filter(n => !existing.has(n))
+      const taken = new Set(tables.map(t => t.table_number))
+      const toCreate = nextAvailableNumbers(taken, genCount, genStartFrom)
       if (toCreate.length === 0) {
-        setError('All those table numbers already exist for this ticket type.')
+        setError('Nothing to generate — set a count of 1 or more.')
         return
       }
-      const tt = ticketTypes.find(t => t.id === genTicketTypeId)
+      // Ticket type is required in sold mode, optional (may be unassigned) in custom mode.
+      const ticketTypeId = genMode === 'custom' ? (genTicketTypeId || null) : genTicketTypeId
+      const tt = ticketTypes.find(t => t.id === ticketTypeId)
       const created = await createTables(
         event.id,
         toCreate.map(n => ({
           table_number: n,
           name: tt ? `${tt.name} ${n}` : null,
-          ticket_type_id: genTicketTypeId,
+          ticket_type_id: ticketTypeId,
         }))
       )
       setTables(prev => [...prev, ...created].sort((a, b) => a.table_number - b.table_number))
@@ -216,6 +254,76 @@ export default function EventTablesPage() {
       setError((err as Error).message)
     } finally {
       setSyncing(false)
+    }
+  }
+
+  const handleAssignType = async (table: DbEventTable, ticketTypeId: string | null) => {
+    if (ticketTypeId === (table.ticket_type_id ?? null)) return
+    setError(null)
+    try {
+      await updateTable(table.id, { ticket_type_id: ticketTypeId })
+      const tt = ticketTypeId ? ticketTypes.find(t => t.id === ticketTypeId) : undefined
+      setTables(prev => prev.map(t => t.id === table.id
+        ? {
+            ...t,
+            ticket_type_id: ticketTypeId,
+            ticket_types: tt ? { id: tt.id, name: tt.name, type: tt.type } : undefined,
+          }
+        : t))
+    } catch (err: unknown) {
+      setError((err as Error).message)
+    }
+  }
+
+  const handleAssignUsher = async (table: DbEventTable, usherId: string | null) => {
+    if (usherId === (table.usher_id ?? null)) return
+    setError(null)
+    try {
+      await updateTable(table.id, { usher_id: usherId })
+      const u = usherId ? ushers.find(x => x.id === usherId) : undefined
+      setTables(prev => prev.map(t => t.id === table.id
+        ? {
+            ...t,
+            usher_id: usherId,
+            event_ushers: u ? { id: u.id, name: u.name, phone: u.phone } : undefined,
+          }
+        : t))
+    } catch (err: unknown) {
+      setError((err as Error).message)
+    }
+  }
+
+  const handleAddUsher = async () => {
+    if (!event) return
+    const name = usherName.trim()
+    const phone = usherPhone.trim()
+    if (!name || !phone) return
+    setAddingUsher(true)
+    setError(null)
+    try {
+      const created = await createUsher(event.id, { name, phone })
+      setUshers(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)))
+      setUsherName('')
+      setUsherPhone('')
+    } catch (err: unknown) {
+      setError((err as Error).message)
+    } finally {
+      setAddingUsher(false)
+    }
+  }
+
+  const handleDeleteUsher = async (usher: DbEventUsher) => {
+    if (!confirm(`Remove usher "${usher.name}"? Tables assigned to them will become unassigned.`)) return
+    setError(null)
+    try {
+      await deleteUsher(usher.id)
+      setUshers(prev => prev.filter(u => u.id !== usher.id))
+      // Reflect the ON DELETE SET NULL on any tables that referenced this usher
+      setTables(prev => prev.map(t => t.usher_id === usher.id
+        ? { ...t, usher_id: null, event_ushers: undefined }
+        : t))
+    } catch (err: unknown) {
+      setError((err as Error).message)
     }
   }
 
@@ -318,20 +426,48 @@ export default function EventTablesPage() {
 
         {ticketTypes.length === 0 && (
           <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-            No table ticket types found. Open the event editor, expand a ticket type, and enable the <strong>Table ticket</strong> toggle.
+            No table ticket types found — the <strong>From tickets sold</strong> sync is unavailable. You can still generate standalone tables below. To enable sold-based syncing, open the event editor, expand a ticket type, and turn on the <strong>Table ticket</strong> toggle.
           </div>
         )}
 
         {/* ── Controls ────────────────────────────────────────────────────── */}
-        {ticketTypes.length > 0 && (
+        {(
           <div className="grid sm:grid-cols-2 gap-4">
 
             {/* Bulk generate */}
             <Card>
               <CardHeader><CardTitle className="text-base">Generate Tables</CardTitle></CardHeader>
               <CardContent className="space-y-4">
+
+                {/* Mode toggle */}
+                <div className="inline-flex rounded-md border border-input p-0.5 bg-muted/40">
+                  <button
+                    type="button"
+                    onClick={() => setGenMode('sold')}
+                    disabled={ticketTypes.length === 0}
+                    className={cn(
+                      'px-3 py-1.5 text-xs font-medium rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed',
+                      genMode === 'sold' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    From tickets sold
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGenMode('custom')}
+                    className={cn(
+                      'px-3 py-1.5 text-xs font-medium rounded transition-colors',
+                      genMode === 'custom' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    Custom count
+                  </button>
+                </div>
+
                 <p className="text-sm text-muted-foreground">
-                  Pick a ticket type and generate a batch of numbered tables for it.
+                  {genMode === 'sold'
+                    ? 'Pick a ticket type and generate a batch of numbered tables matching its sold count.'
+                    : 'Generate any number of tables, independent of tickets sold. Numbers fill the lowest available gaps.'}
                 </p>
 
                 <div className="space-y-2">
@@ -341,11 +477,12 @@ export default function EventTablesPage() {
                     onChange={e => setGenTicketTypeId(e.target.value)}
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   >
+                    {genMode === 'custom' && <option value="">None / Unassigned</option>}
                     {ticketTypes.map(tt => (
                       <option key={tt.id} value={tt.id}>{tt.name} ({tt.sold} sold)</option>
                     ))}
                   </select>
-                  {selectedTT && (
+                  {genMode === 'sold' && selectedTT && (
                     <p className="text-xs text-muted-foreground">
                       {tables.filter(t => t.ticket_type_id === genTicketTypeId).length} table{tables.filter(t => t.ticket_type_id === genTicketTypeId).length !== 1 ? 's' : ''} already exist for this type
                     </p>
@@ -363,7 +500,7 @@ export default function EventTablesPage() {
                   </div>
                 </div>
 
-                <Button onClick={handleBulkGenerate} disabled={generating || !genTicketTypeId} size="sm">
+                <Button onClick={handleBulkGenerate} disabled={generating || (genMode === 'sold' && !genTicketTypeId)} size="sm">
                   {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />}
                   Generate {genCount} Table{genCount !== 1 ? 's' : ''}
                 </Button>
@@ -423,6 +560,65 @@ export default function EventTablesPage() {
           </div>
         )}
 
+        {/* ── Ushers ────────────────────────────────────────────────────────── */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="h-4 w-4" /> Ushers
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Add ushers with a WhatsApp number, then assign one to each table below. When a guest places an order, the table's usher gets an instant WhatsApp alert.
+            </p>
+
+            <div className="grid sm:grid-cols-[1fr_1fr_auto] gap-3 sm:items-end">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Name</label>
+                <Input
+                  value={usherName}
+                  onChange={e => setUsherName(e.target.value)}
+                  placeholder="e.g. Chidi"
+                  onKeyDown={e => e.key === 'Enter' && handleAddUsher()}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">WhatsApp number</label>
+                <Input
+                  type="tel"
+                  value={usherPhone}
+                  onChange={e => setUsherPhone(e.target.value)}
+                  placeholder="e.g. 0803 123 4567"
+                  onKeyDown={e => e.key === 'Enter' && handleAddUsher()}
+                />
+              </div>
+              <Button onClick={handleAddUsher} disabled={addingUsher || !usherName.trim() || !usherPhone.trim()} size="sm">
+                {addingUsher ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                Add Usher
+              </Button>
+            </div>
+
+            {ushers.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {ushers.map(u => (
+                  <div key={u.id} className="flex items-center gap-2 rounded-full border bg-muted/40 pl-3 pr-1.5 py-1 text-sm">
+                    <span className="font-medium">{u.name}</span>
+                    <span className="text-xs text-muted-foreground">{u.phone}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteUsher(u)}
+                      title="Remove usher"
+                      className="text-muted-foreground hover:text-destructive rounded-full p-0.5"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* ── Tables display ────────────────────────────────────────────────── */}
         {tables.length === 0 ? (
           <div className="rounded-lg border border-dashed bg-card flex flex-col items-center justify-center py-16 text-center gap-3">
@@ -458,6 +654,8 @@ export default function EventTablesPage() {
                 <TableGrid
                   tables={groupTables}
                   event={event}
+                  ticketTypes={ticketTypes}
+                  ushers={ushers}
                   qrDataUrls={qrDataUrls}
                   editingId={editingId}
                   editName={editName}
@@ -466,6 +664,8 @@ export default function EventTablesPage() {
                   onEditNameChange={setEditName}
                   onCommitName={commitEditName}
                   onCancelEdit={() => setEditingId(null)}
+                  onAssignType={handleAssignType}
+                  onAssignUsher={handleAssignUsher}
                   onDownloadPng={downloadQrPng}
                   onDelete={handleDelete}
                 />
@@ -482,6 +682,8 @@ export default function EventTablesPage() {
                 <TableGrid
                   tables={unassigned}
                   event={event}
+                  ticketTypes={ticketTypes}
+                  ushers={ushers}
                   qrDataUrls={qrDataUrls}
                   editingId={editingId}
                   editName={editName}
@@ -490,6 +692,8 @@ export default function EventTablesPage() {
                   onEditNameChange={setEditName}
                   onCommitName={commitEditName}
                   onCancelEdit={() => setEditingId(null)}
+                  onAssignType={handleAssignType}
+                  onAssignUsher={handleAssignUsher}
                   onDownloadPng={downloadQrPng}
                   onDelete={handleDelete}
                 />
@@ -507,6 +711,8 @@ export default function EventTablesPage() {
 interface TableGridProps {
   tables: DbEventTable[]
   event: DbEvent
+  ticketTypes: DbTicketType[]
+  ushers: DbEventUsher[]
   qrDataUrls: Record<string, string>
   editingId: string | null
   editName: string
@@ -515,15 +721,17 @@ interface TableGridProps {
   onEditNameChange: (val: string) => void
   onCommitName: (table: DbEventTable) => void
   onCancelEdit: () => void
+  onAssignType: (table: DbEventTable, ticketTypeId: string | null) => void
+  onAssignUsher: (table: DbEventTable, usherId: string | null) => void
   onDownloadPng: (table: DbEventTable) => void
   onDelete: (table: DbEventTable) => void
 }
 
 function TableGrid({
-  tables, event, qrDataUrls,
+  tables, event, ticketTypes, ushers, qrDataUrls,
   editingId, editName, editRef,
   onEditName, onEditNameChange, onCommitName, onCancelEdit,
-  onDownloadPng, onDelete,
+  onAssignType, onAssignUsher, onDownloadPng, onDelete,
 }: TableGridProps) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -576,6 +784,32 @@ function TableGrid({
                 {displayName}
               </button>
             )}
+
+            {/* Ticket type assignment */}
+            <select
+              value={table.ticket_type_id ?? ''}
+              onChange={e => onAssignType(table, e.target.value || null)}
+              title="Assign to a ticket type"
+              className="w-full text-xs rounded border border-input bg-background px-2 py-1 text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">Unassigned</option>
+              {ticketTypes.map(tt => (
+                <option key={tt.id} value={tt.id}>{tt.name}</option>
+              ))}
+            </select>
+
+            {/* Usher assignment */}
+            <select
+              value={table.usher_id ?? ''}
+              onChange={e => onAssignUsher(table, e.target.value || null)}
+              title="Assign an usher — they get a WhatsApp alert on each order"
+              className="w-full text-xs rounded border border-input bg-background px-2 py-1 text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">No usher</option>
+              {ushers.map(u => (
+                <option key={u.id} value={u.id}>{u.name}</option>
+              ))}
+            </select>
 
             {/* QR URL */}
             <p className="text-[10px] text-muted-foreground/50 text-center leading-tight break-all line-clamp-2 w-full">

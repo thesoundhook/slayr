@@ -34,11 +34,20 @@ function naira(kobo: number) {
   return '₦' + (kobo / 100).toLocaleString('en-NG')
 }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+// Gap left between consecutive sends. WhatsApp throttles rapid bursts from one
+// instance and silently drops messages (the HTTP call still returns PENDING),
+// so we pace them out. ~1.5s is enough to keep an instance happy.
+const SEND_GAP_MS = 1500
+
 async function sendText(number: string, text: string) {
   const res = await fetch(`${EVOLUTION_API_URL}/message/sendText/${EVOLUTION_INSTANCE}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', apikey: EVOLUTION_API_KEY },
-    body: JSON.stringify({ number, text }),
+    // `delay` makes Evolution show "typing" briefly before sending, which also
+    // spaces messages within the instance's own send queue.
+    body: JSON.stringify({ number, text, delay: 1200 }),
   })
   if (!res.ok) {
     const body = await res.text()
@@ -240,7 +249,12 @@ ${receipt}
 
 Payment: ${methodLabel} (${paidTag})${usherLine}
 Order #${ref}`
+        // If the customer was just messaged, the queue already had one send;
+        // keep pacing from here too.
+        let firstStaffSend = !(customerNumber && customerMsg)
         for (const r of recipients) {
+          if (!firstStaffSend) await sleep(SEND_GAP_MS)
+          firstStaffSend = false
           try { results[r.label] = await sendText(r.number, staffMsg) }
           catch (e) { results[`${r.label}Error`] = (e as Error).message }
         }

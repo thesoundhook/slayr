@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, RefreshCw, Clock, CheckCircle2, ChefHat, Truck, XCircle, Wallet, CreditCard, BadgeCheck, Banknote, Image as ImageIcon } from 'lucide-react'
+import { ArrowLeft, RefreshCw, Clock, CheckCircle2, ChefHat, Truck, XCircle, Wallet, CreditCard, BadgeCheck, Banknote, Image as ImageIcon, Receipt, ShoppingBag, ListOrdered, EyeOff, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getEventById } from '@/services/eventService'
 import type { DbEvent } from '@/types/database'
@@ -60,6 +60,8 @@ export default function EventOrdersPage() {
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all')
   const [updating, setUpdating] = useState<string | null>(null)
+  const [hiddenNames, setHiddenNames] = useState<string[]>([])
+  const [hideInput, setHideInput] = useState('')
 
   const loadOrders = useCallback(async (eventId: string) => {
     const { data, error } = await supabase
@@ -99,6 +101,28 @@ export default function EventOrdersPage() {
     return () => { supabase.removeChannel(channel) }
   }, [event, loadOrders])
 
+  // Load / persist hidden customer names per event (survives refresh)
+  useEffect(() => {
+    if (!id) return
+    try {
+      const raw = localStorage.getItem(`hiddenCustomers:${id}`)
+      setHiddenNames(raw ? JSON.parse(raw) : [])
+    } catch { setHiddenNames([]) }
+  }, [id])
+
+  useEffect(() => {
+    if (!id) return
+    try { localStorage.setItem(`hiddenCustomers:${id}`, JSON.stringify(hiddenNames)) } catch { /* ignore */ }
+  }, [id, hiddenNames])
+
+  const norm = (s: string) => s.trim().toLowerCase()
+  const addHidden = (name: string) => {
+    const n = name.trim()
+    if (!n) return
+    setHiddenNames(prev => prev.some(x => norm(x) === norm(n)) ? prev : [...prev, n])
+  }
+  const removeHidden = (name: string) => setHiddenNames(prev => prev.filter(x => x !== name))
+
   const notifyWhatsapp = async (orderId: string, kind: 'placed' | 'paid' | 'status') => {
     try { await supabase.functions.invoke('send-whatsapp', { body: { orderId, kind } }) }
     catch (e) { console.warn('[whatsapp] notify failed', e) }
@@ -135,7 +159,12 @@ export default function EventOrdersPage() {
     setUpdating(null)
   }
 
-  const filtered = orders.filter(o => statusFilter === 'all' || o.status === statusFilter)
+  // Exclude hidden customers (e.g. test orders) from the list and all totals
+  const hiddenSet = new Set(hiddenNames.map(norm))
+  const visibleOrders = orders.filter(o => !hiddenSet.has(norm(o.customer_name)))
+  const hiddenCount = orders.length - visibleOrders.length
+
+  const filtered = visibleOrders.filter(o => statusFilter === 'all' || o.status === statusFilter)
 
   // Group by table number
   const byTable = filtered.reduce<Record<number, TableOrder[]>>((acc, o) => {
@@ -144,8 +173,14 @@ export default function EventOrdersPage() {
     return acc
   }, {})
 
-  const pendingCount = orders.filter(o => o.status === 'pending').length
-  const unpaidCount  = orders.filter(o => !o.is_paid && o.status !== 'cancelled').length
+  const pendingCount = visibleOrders.filter(o => o.status === 'pending').length
+  const unpaidCount  = visibleOrders.filter(o => !o.is_paid && o.status !== 'cancelled').length
+
+  // Totals — excludes cancelled orders
+  const counted      = visibleOrders.filter(o => o.status !== 'cancelled')
+  const totalRevenue = counted.reduce((sum, o) => sum + o.total, 0)
+  const totalItems   = counted.reduce((sum, o) => sum + o.table_order_items.reduce((n, i) => n + i.quantity, 0), 0)
+  const totalOrders  = counted.length
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>
   if (!event)  return <div className="p-6 text-muted-foreground">Event not found.</div>
@@ -181,6 +216,76 @@ export default function EventOrdersPage() {
 
       <div className="p-4 sm:p-6 space-y-5 max-w-5xl mx-auto">
 
+        {/* Totals summary — excludes cancelled orders */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Card>
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="rounded-lg bg-primary/10 text-primary p-2.5 shrink-0">
+                <Receipt className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Total revenue</p>
+                <p className="text-xl font-semibold tracking-tight">{formatPrice(totalRevenue)}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="rounded-lg bg-primary/10 text-primary p-2.5 shrink-0">
+                <ShoppingBag className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Items sold</p>
+                <p className="text-xl font-semibold tracking-tight">{totalItems.toLocaleString('en-NG')}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="rounded-lg bg-primary/10 text-primary p-2.5 shrink-0">
+                <ListOrdered className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Orders</p>
+                <p className="text-xl font-semibold tracking-tight">{totalOrders.toLocaleString('en-NG')}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        <p className="text-[11px] text-muted-foreground -mt-3">
+          Totals exclude cancelled orders{hiddenCount > 0 ? ` and ${hiddenCount} hidden order${hiddenCount !== 1 ? 's' : ''}` : ''}.
+        </p>
+
+        {/* Hide customers (e.g. test orders) */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative">
+            <EyeOff className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <input
+              value={hideInput}
+              onChange={e => setHideInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { addHidden(hideInput); setHideInput('') } }}
+              placeholder="Hide customer name…"
+              className="h-9 w-48 rounded-md border border-input bg-background pl-8 pr-3 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <Button variant="outline" size="sm" className="text-xs" onClick={() => { addHidden(hideInput); setHideInput('') }}>
+            Hide
+          </Button>
+          {hiddenNames.map(name => (
+            <span key={name} className="inline-flex items-center gap-1 text-[11px] font-medium bg-muted text-muted-foreground rounded-full pl-2.5 pr-1 py-1">
+              {name}
+              <button onClick={() => removeHidden(name)} className="rounded-full hover:bg-background p-0.5" title="Unhide">
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+          {hiddenNames.length > 0 && (
+            <button onClick={() => setHiddenNames([])} className="text-[11px] font-semibold text-primary hover:underline">
+              Show all
+            </button>
+          )}
+        </div>
+
         {/* Status filter tabs */}
         <div className="flex flex-wrap gap-2">
           {(['all', 'pending', 'confirmed', 'preparing', 'served', 'cancelled'] as const).map(s => (
@@ -194,7 +299,7 @@ export default function EventOrdersPage() {
                   : 'border-input text-muted-foreground hover:text-foreground hover:bg-muted'
               )}
             >
-              {s === 'all' ? `All (${orders.length})` : `${s} (${orders.filter(o => o.status === s).length})`}
+              {s === 'all' ? `All (${visibleOrders.length})` : `${s} (${visibleOrders.filter(o => o.status === s).length})`}
             </button>
           ))}
         </div>
@@ -317,6 +422,15 @@ export default function EventOrdersPage() {
                               Cancel
                             </Button>
                           )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-xs text-muted-foreground"
+                            onClick={() => addHidden(order.customer_name)}
+                            title={`Hide all orders from ${order.customer_name}`}
+                          >
+                            <EyeOff className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
                       </CardContent>
                     </Card>
